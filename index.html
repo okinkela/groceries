@@ -18,7 +18,6 @@
       --ink: #1a1a1a;
       --ink-light: #888;
       --accent: #2d6a4f;
-      --accent-light: #d8f3dc;
       --danger: #c1440e;
       --border: #e8e2d9;
       --checked-bg: #f0f0ec;
@@ -35,335 +34,200 @@ body {
   min-height: 100vh;
   min-height: -webkit-fill-available;
   padding-bottom: env(safe-area-inset-bottom);
+  overflow-x: hidden;
 }
 
 header {
   background: var(--card);
   border-bottom: 1px solid var(--border);
   padding: 52px 24px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  position: sticky; top: 0; z-index: 10;
 }
 
 header h1 {
   font-family: 'DM Serif Display', serif;
-  font-size: 2rem;
-  letter-spacing: -0.5px;
-  color: var(--ink);
+  font-size: 2rem; letter-spacing: -0.5px; color: var(--ink);
 }
-
-header h1 span {
-  font-style: italic;
-  color: var(--accent);
-}
+header h1 span { font-style: italic; color: var(--accent); }
 
 .sync-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-size: 0.75rem;
-  color: var(--ink-light);
-  font-weight: 300;
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px; font-size: 0.75rem;
+  color: var(--ink-light); font-weight: 300;
 }
 
 .sync-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ink-light);
-  transition: background 0.3s;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-light); transition: background 0.3s; flex-shrink: 0;
 }
 .sync-dot.syncing { background: #f0a500; animation: pulse 1s infinite; }
-.sync-dot.ok { background: var(--accent); }
-.sync-dot.error { background: var(--danger); }
+.sync-dot.ok      { background: var(--accent); }
+.sync-dot.error   { background: var(--danger); }
+.sync-dot.dirty   { background: #f0a500; }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.gear-btn {
+  position: absolute; top: 52px; right: 24px;
+  background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 4px;
 }
 
 .add-bar {
-  display: flex;
-  gap: 10px;
-  padding: 16px 24px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 101px;
-  z-index: 9;
+  display: flex; gap: 10px; padding: 16px 24px;
+  background: var(--card); border-bottom: 1px solid var(--border);
+  position: sticky; top: 101px; z-index: 9;
 }
 
 .add-bar input {
-  flex: 1;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1rem;
-  background: var(--bg);
-  color: var(--ink);
-  outline: none;
-  transition: border-color 0.2s;
+  flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 12px 16px; font-family: 'DM Sans', sans-serif; font-size: 1rem;
+  background: var(--bg); color: var(--ink); outline: none; transition: border-color 0.2s;
 }
-
 .add-bar input:focus { border-color: var(--accent); }
 .add-bar input::placeholder { color: var(--ink-light); }
 
 .add-bar button {
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  width: 48px;
-  font-size: 1.5rem;
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--accent); color: white; border: none; border-radius: 10px;
+  width: 48px; cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  display: flex; align-items: center; justify-content: center;
 }
-
 .add-bar button:active { opacity: 0.8; transform: scale(0.95); }
 
-.list-wrap {
-  padding: 16px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.list-wrap { padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
 
 .section-label {
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--ink-light);
-  margin-top: 8px;
-  margin-bottom: 2px;
+  font-size: 0.7rem; font-weight: 500; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--ink-light); margin-top: 8px; margin-bottom: 2px;
 }
 
-.item {
-  background: var(--card);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-  transition: opacity 0.2s, transform 0.15s;
-  animation: slideIn 0.2s ease;
+/* Swipe row */
+.item-wrap {
+  position: relative; border-radius: 12px;
+  overflow: hidden; animation: slideIn 0.2s ease;
 }
 
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.item.checked {
-  background: var(--checked-bg);
-  border-color: transparent;
-  box-shadow: none;
+.item-delete-bg {
+  position: absolute; inset: 0;
+  background: var(--danger);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 22px; color: white;
+  font-size: 0.85rem; font-weight: 500; letter-spacing: 0.3px;
+  gap: 7px; border-radius: 12px;
 }
 
-.item.checked .item-name {
-  text-decoration: line-through;
-  color: var(--ink-light);
+.item {
+  position: relative; background: var(--card); border-radius: 12px;
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+  transition: background 0.2s; touch-action: pan-y;
+  user-select: none; will-change: transform;
 }
+
+.item.checked { background: var(--checked-bg); border-color: transparent; box-shadow: none; }
+.item.checked .item-name { color: var(--ink-light); }
 
 .check-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: white;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--border); background: white;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
 }
+.item.checked .check-btn { background: var(--accent); border-color: var(--accent); }
+.item.checked .item-name { color: var(--ink); }
+.item:not(.checked) .check-btn { background: white; border-color: var(--border); }
+.item:not(.checked) .item-name { color: var(--ink-light); }
+.item-name { flex: 1; font-size: 1rem; font-weight: 400; transition: color 0.2s; }
 
-.item.checked .check-btn {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.check-btn svg { display: none; }
-.item.checked .check-btn svg { display: block; }
-
-.item-name {
-  flex: 1;
-  font-size: 1rem;
-  font-weight: 400;
-  color: var(--ink);
-  transition: color 0.2s;
-}
-
-.del-btn {
-  background: none;
-  border: none;
-  color: var(--ink-light);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  opacity: 0.4;
-  transition: opacity 0.15s;
-  display: flex;
-  align-items: center;
-}
-
-.del-btn:active { opacity: 1; color: var(--danger); }
-
-.empty {
-  text-align: center;
-  padding: 60px 24px;
-  color: var(--ink-light);
-}
-
+.empty { text-align: center; padding: 60px 24px; color: var(--ink-light); }
 .empty p:first-child {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.3rem;
-  font-style: italic;
-  margin-bottom: 6px;
-  color: var(--ink);
+  font-family: 'DM Serif Display', serif; font-size: 1.3rem;
+  font-style: italic; margin-bottom: 6px; color: var(--ink);
 }
-
 .empty p:last-child { font-size: 0.85rem; font-weight: 300; }
 
 .clear-btn {
-  display: block;
-  margin: 8px auto 24px;
-  background: none;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 18px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.8rem;
-  color: var(--ink-light);
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  display: block; margin: 8px auto 24px; background: none;
+  border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 18px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: var(--ink-light); cursor: pointer;
 }
-
 .clear-btn:active { border-color: var(--danger); color: var(--danger); }
 
-/* Config screen */
+/* Confirm sheet */
+.confirm-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35); z-index: 100; align-items: flex-end;
+}
+.confirm-overlay.open { display: flex; }
+
+.confirm-sheet {
+  background: var(--card); border-radius: 20px 20px 0 0;
+  padding: 28px 24px calc(28px + env(safe-area-inset-bottom));
+  width: 100%; animation: slideUp 0.22s ease;
+}
+.confirm-sheet p { font-size: 1rem; margin-bottom: 20px; color: var(--ink); }
+.confirm-sheet p strong { font-weight: 500; }
+.confirm-del {
+  width: 100%; background: var(--danger); color: white; border: none;
+  border-radius: 12px; padding: 14px; margin-bottom: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 500; cursor: pointer;
+}
+.confirm-cancel {
+  width: 100%; background: none; border: none; color: var(--ink-light);
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
+}
+
+/* Config sheet */
 .config-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 100;
-  align-items: flex-end;
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-end;
 }
 .config-overlay.open { display: flex; }
 
 .config-sheet {
-  background: var(--card);
-  border-radius: 20px 20px 0 0;
+  background: var(--card); border-radius: 20px 20px 0 0;
   padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
-  width: 100%;
-  animation: slideUp 0.25s ease;
+  width: 100%; animation: slideUp 0.25s ease;
 }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
 
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-.config-sheet h2 {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.4rem;
-  margin-bottom: 4px;
-}
-
-.config-sheet p {
-  font-size: 0.8rem;
-  color: var(--ink-light);
-  margin-bottom: 20px;
-  font-weight: 300;
-}
-
+.config-sheet h2 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 4px; }
+.config-sheet > p { font-size: 0.8rem; color: var(--ink-light); margin-bottom: 20px; font-weight: 300; }
 .config-sheet label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--ink-light);
-  margin-bottom: 6px;
+  display: block; font-size: 0.75rem; font-weight: 500;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--ink-light); margin-bottom: 6px;
 }
-
 .config-sheet input {
-  width: 100%;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  background: var(--bg);
-  color: var(--ink);
-  outline: none;
-  margin-bottom: 16px;
-  font-family: monospace;
+  width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; font-family: monospace; font-size: 0.85rem;
+  background: var(--bg); color: var(--ink); outline: none; margin-bottom: 16px;
 }
-
 .config-sheet input:focus { border-color: var(--accent); }
-
 .config-save {
-  width: 100%;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 14px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  margin-bottom: 10px;
+  width: 100%; background: var(--accent); color: white; border: none;
+  border-radius: 12px; padding: 14px; margin-bottom: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 500; cursor: pointer;
 }
-
 .config-cancel {
-  width: 100%;
-  background: none;
-  border: none;
-  color: var(--ink-light);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 8px;
-}
-
-.gear-btn {
-  position: absolute;
-  top: 52px;
-  right: 24px;
-  background: none;
-  border: none;
-  color: var(--ink-light);
-  cursor: pointer;
-  padding: 4px;
+  width: 100%; background: none; border: none; color: var(--ink-light);
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
 }
 
 .toast {
-  position: fixed;
-  bottom: calc(24px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: var(--ink);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  transition: transform 0.3s ease;
-  z-index: 200;
-  white-space: nowrap;
+  position: fixed; bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--ink); color: white; padding: 10px 20px;
+  border-radius: 20px; font-size: 0.85rem; transition: transform 0.3s ease;
+  z-index: 200; white-space: nowrap;
 }
-
 .toast.show { transform: translateX(-50%) translateY(0); }
+
+mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1px; }
 ```
 
   </style>
@@ -378,7 +242,8 @@ header h1 span {
   </div>
   <button class="gear-btn" onclick="openConfig()" aria-label="Settings">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
   </button>
 </header>
@@ -393,19 +258,24 @@ header h1 span {
 </div>
 
 <div class="list-wrap" id="listWrap"></div>
-
 <div class="toast" id="toast"></div>
 
-<!-- Config sheet -->
+<!-- Delete confirm -->
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-sheet">
+    <p>Remove <strong id="confirmName"></strong> from the list?</p>
+    <button class="confirm-del" onclick="confirmDelete()">Remove</button>
+    <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+  </div>
+</div>
+
+<!-- Config -->
 
 <div class="config-overlay" id="configOverlay">
   <div class="config-sheet">
     <h2>Setup</h2>
-    <p>Enter your GitHub details. Only needed once per device.</p>
-    <label>GitHub Username</label>
-    <input type="text" id="cfgUser" placeholder="yourname" autocomplete="off" autocorrect="off" autocapitalize="off" />
-    <label>Repository Name</label>
-    <input type="text" id="cfgRepo" placeholder="groceries" autocomplete="off" autocorrect="off" autocapitalize="off" />
+    <p>Enter your GitHub personal access token. Only needed once per device.</p>
     <label>Personal Access Token</label>
     <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
     <button class="config-save" onclick="saveConfig()">Save & Sync</button>
@@ -414,25 +284,38 @@ header h1 span {
 </div>
 
 <script>
-  // ── Config ──────────────────────────────────────────────
+  // ── Config ───────────────────────────────────────────────
   let cfg = {
-    user: localStorage.getItem('gh_user') || '',
-    repo: localStorage.getItem('gh_repo') || 'groceries',
+    user:  'okinkela',
+    repo:  'groceries',
     token: localStorage.getItem('gh_token') || ''
   };
 
-  let items = [];
+  let items   = [];
   let fileSha = '';
+  let dirty   = false;
+  let pushing = false;
+  let filter  = '';
 
-  // ── Sync status ─────────────────────────────────────────
-  function setSync(state, msg) {
-    const dot = document.getElementById('syncDot');
-    const lbl = document.getElementById('syncLabel');
-    dot.className = 'sync-dot ' + state;
-    lbl.textContent = msg;
+  // ── Local persistence ────────────────────────────────────
+  function saveLocal() {
+    localStorage.setItem('items_cache', JSON.stringify(items));
+    localStorage.setItem('items_sha',   fileSha);
   }
 
-  // ── Toast ────────────────────────────────────────────────
+  function loadLocal() {
+    const cached = localStorage.getItem('items_cache');
+    const sha    = localStorage.getItem('items_sha');
+    if (cached) { items = JSON.parse(cached); fileSha = sha || ''; }
+  }
+
+  // ── Sync status ──────────────────────────────────────────
+  function setSync(state, msg) {
+    document.getElementById('syncDot').className = 'sync-dot ' + state;
+    document.getElementById('syncLabel').textContent = msg;
+  }
+
+  // ── Toast ─────────────────────────────────────────────────
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -440,37 +323,36 @@ header h1 span {
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
-  // ── GitHub API ───────────────────────────────────────────
+  // ── GitHub API ────────────────────────────────────────────
   function apiUrl() {
     return `https://api.github.com/repos/${cfg.user}/${cfg.repo}/contents/groceries.json`;
   }
 
   async function fetchList() {
     if (!cfg.user || !cfg.token) { openConfig(); return; }
+    if (dirty) return; // don't overwrite unsaved local changes
     setSync('syncing', 'Syncing…');
     try {
       const res = await fetch(apiUrl(), {
         headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github.v3+json' }
       });
-      if (!res.ok) throw new Error('Fetch failed');
+      if (!res.ok) throw new Error();
       const data = await res.json();
       fileSha = data.sha;
-      items = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      items   = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      saveLocal();
       render();
       setSync('ok', 'Synced just now');
-    } catch(e) {
-      setSync('error', 'Sync failed — tap ⚙ to check settings');
+    } catch {
+      setSync('error', 'Sync failed — will retry');
     }
   }
 
   async function pushList() {
+    if (!cfg.user || !cfg.token || pushing) return;
+    pushing = true;
     setSync('syncing', 'Saving…');
     try {
-      const body = {
-        message: 'update groceries',
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(items)))),
-        sha: fileSha
-      };
       const res = await fetch(apiUrl(), {
         method: 'PUT',
         headers: {
@@ -478,138 +360,232 @@ header h1 span {
           Accept: 'application/vnd.github.v3+json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          message: 'update groceries',
+          content: btoa(unescape(encodeURIComponent(JSON.stringify(items)))),
+          sha: fileSha
+        })
       });
-      if (!res.ok) throw new Error('Push failed');
+      if (!res.ok) throw new Error();
       const data = await res.json();
       fileSha = data.content.sha;
+      saveLocal();
+      dirty = false;
       setSync('ok', 'Saved');
-    } catch(e) {
-      setSync('error', 'Save failed');
-      showToast('Could not save — check your connection');
+    } catch {
+      setSync('dirty', 'Not saved — will retry');
+    } finally {
+      pushing = false;
     }
   }
 
-  // ── Render ───────────────────────────────────────────────
-  function render() {
+  function markDirty() {
+    dirty = true;
+    saveLocal();
+    setSync('dirty', 'Pending save…');
+  }
+
+  // Every 30s: push if dirty, fetch if clean
+  setInterval(() => { dirty ? pushList() : fetchList(); }, 30000);
+
+  // ── Render ────────────────────────────────────────────────
+  function render(scrollToId) {
     const wrap = document.getElementById('listWrap');
-    const pending = items.filter(i => !i.checked);
-    const done = items.filter(i => i.checked);
+    const q    = filter.toLowerCase().trim();
+
+    // When filtering, show all matching items flat (no sections)
+    if (q) {
+      const matches = items.filter(i => i.name.toLowerCase().includes(q));
+      wrap.innerHTML = '';
+      if (matches.length === 0) {
+        wrap.innerHTML = `<div class="empty"><p>No matches</p><p>Tap + to add "${escHtml(filter)}"</p></div>`;
+      } else {
+        matches.forEach(item => wrap.appendChild(makeItemEl(item, q)));
+      }
+      return;
+    }
+
+    const pending = items.filter(i =>  i.checked);
+    const done    = items.filter(i => !i.checked);
+
+    wrap.innerHTML = '';
 
     if (items.length === 0) {
       wrap.innerHTML = `<div class="empty"><p>Nothing yet</p><p>Add your first item above</p></div>`;
       return;
     }
 
-    let html = '';
-
     if (pending.length > 0) {
-      html += `<div class="section-label">To get</div>`;
-      pending.forEach(item => { html += itemHTML(item); });
+      wrap.appendChild(sectionLabel('To get'));
+      pending.forEach(item => wrap.appendChild(makeItemEl(item)));
     }
 
     if (done.length > 0) {
-      html += `<div class="section-label">In the cart</div>`;
-      done.forEach(item => { html += itemHTML(item); });
-      html += `<button class="clear-btn" onclick="clearChecked()">Clear checked items</button>`;
+      done.forEach(item => wrap.appendChild(makeItemEl(item)));
+      const btn = document.createElement('button');
+      btn.className = 'clear-btn';
+      btn.textContent = 'Clear checked items';
+      btn.onclick = clearChecked;
+      wrap.appendChild(btn);
     }
 
-    wrap.innerHTML = html;
+    if (scrollToId) {
+      setTimeout(() => {
+        const el = document.getElementById('wrap-' + scrollToId);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
   }
 
-  function itemHTML(item) {
-    return `
-      <div class="item ${item.checked ? 'checked' : ''}" id="item-${item.id}">
-        <button class="check-btn" onclick="toggle('${item.id}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-        </button>
-        <span class="item-name">${escHtml(item.name)}</span>
-        <button class="del-btn" onclick="deleteItem('${item.id}')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>`;
+  function sectionLabel(text) {
+    const d = document.createElement('div');
+    d.className = 'section-label';
+    d.textContent = text;
+    return d;
+  }
+
+  function makeItemEl(item, highlight) {
+    const wrap = document.createElement('div');
+    wrap.className = 'item-wrap';
+    wrap.id = 'wrap-' + item.id;
+
+    // Red background shown during swipe
+    const bg = document.createElement('div');
+    bg.className = 'item-delete-bg';
+    bg.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+      </svg>
+      Remove`;
+    wrap.appendChild(bg);
+
+    // Item row
+    const el = document.createElement('div');
+    el.className = 'item' + (item.checked ? ' checked' : '');
+    const displayName = highlight ? highlightMatch(item.name, highlight) : escHtml(item.name);
+    el.innerHTML = `
+      <button class="check-btn" onclick="toggle('${item.id}')"></button>
+      <span class="item-name">${displayName}</span>
+    `;
+    wrap.appendChild(el);
+    attachSwipe(el, item);
+    return wrap;
+  }
+
+  // ── Swipe left to delete ──────────────────────────────────
+  function attachSwipe(el, item) {
+    let startX = 0, curX = 0, active = false;
+    const THRESHOLD = 80;
+
+    el.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      curX = 0; active = true;
+      el.style.transition = 'none';
+    }, { passive: true });
+
+    el.addEventListener('touchmove', e => {
+      if (!active) return;
+      const dx = e.touches[0].clientX - startX;
+      if (dx > 0) return;
+      curX = dx;
+      el.style.transform = `translateX(${Math.max(dx, -120)}px)`;
+    }, { passive: true });
+
+    el.addEventListener('touchend', () => {
+      if (!active) return;
+      active = false;
+      el.style.transition = 'transform 0.2s ease';
+      el.style.transform = 'translateX(0)';
+      if (curX < -THRESHOLD) askDelete(item.id, item.name);
+    });
+  }
+
+  // ── Delete confirm ────────────────────────────────────────
+  let pendingDeleteId = null;
+
+  function askDelete(id, name) {
+    pendingDeleteId = id;
+    document.getElementById('confirmName').textContent = name;
+    document.getElementById('confirmOverlay').classList.add('open');
+  }
+
+  function confirmDelete() {
+    if (pendingDeleteId) {
+      items = items.filter(i => i.id !== pendingDeleteId);
+      markDirty(); render();
+    }
+    closeConfirm();
+  }
+
+  function closeConfirm() {
+    pendingDeleteId = null;
+    document.getElementById('confirmOverlay').classList.remove('open');
+  }
+
+  // ── Actions ───────────────────────────────────────────────
+  function addItem() {
+    const input = document.getElementById('newItem');
+    const name  = input.value.trim();
+    if (!name) return;
+    const id = Date.now().toString();
+    items.unshift({ id, name, checked: true });
+    input.value = '';
+    filter = '';
+    markDirty();
+    render(id);
+  }
+
+  function toggle(id) {
+    const item = items.find(i => i.id === id);
+    if (item) { item.checked = !item.checked; markDirty(); render(); }
+  }
+
+  function clearChecked() {
+    items = items.filter(i => !i.checked);
+    markDirty(); render();
   }
 
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ── Actions ──────────────────────────────────────────────
-  function addItem() {
-    const input = document.getElementById('newItem');
-    const name = input.value.trim();
-    if (!name) return;
-    items.unshift({ id: Date.now().toString(), name, checked: false });
-    input.value = '';
-    render();
-    pushList();
+  function highlightMatch(name, q) {
+    const safe = escHtml(name);
+    const safeQ = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return safe.replace(new RegExp(`(${safeQ})`, 'gi'), '<mark>$1</mark>');
   }
 
-  function toggle(id) {
-    const item = items.find(i => i.id === id);
-    if (item) { item.checked = !item.checked; render(); pushList(); }
-  }
+  // ── Enter key + live filter ───────────────────────────────
+  const newItemInput = document.getElementById('newItem');
+  newItemInput.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+  newItemInput.addEventListener('input', e => { filter = e.target.value; render(); });
 
-  function deleteItem(id) {
-    items = items.filter(i => i.id !== id);
-    render();
-    pushList();
-  }
-
-  function clearChecked() {
-    items = items.filter(i => !i.checked);
-    render();
-    pushList();
-  }
-
-  // ── Enter key ────────────────────────────────────────────
-  document.getElementById('newItem').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addItem();
-  });
-
-  // ── Pull to refresh (simple scroll detection) ────────────
+  // ── Pull to refresh ───────────────────────────────────────
   let startY = 0;
-  document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
+  document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
   document.addEventListener('touchend', e => {
     if (e.changedTouches[0].clientY - startY > 80 && window.scrollY === 0) fetchList();
-  });
+  }, { passive: true });
 
-  // ── Config sheet ─────────────────────────────────────────
+  // ── Config ────────────────────────────────────────────────
   function openConfig() {
-    document.getElementById('cfgUser').value = cfg.user;
-    document.getElementById('cfgRepo').value = cfg.repo;
     document.getElementById('cfgToken').value = cfg.token;
     document.getElementById('configOverlay').classList.add('open');
   }
-
-  function closeConfig() {
-    document.getElementById('configOverlay').classList.remove('open');
-  }
-
+  function closeConfig() { document.getElementById('configOverlay').classList.remove('open'); }
   function saveConfig() {
-    cfg.user = document.getElementById('cfgUser').value.trim();
-    cfg.repo = document.getElementById('cfgRepo').value.trim();
     cfg.token = document.getElementById('cfgToken').value.trim();
-    localStorage.setItem('gh_user', cfg.user);
-    localStorage.setItem('gh_repo', cfg.repo);
     localStorage.setItem('gh_token', cfg.token);
-    closeConfig();
-    fetchList();
+    closeConfig(); fetchList();
   }
 
-  // ── Auto-refresh every 30s ────────────────────────────────
-  setInterval(fetchList, 30000);
-
-  // ── Init ─────────────────────────────────────────────────
-  if (cfg.user && cfg.token) {
-    fetchList();
-  } else {
-    openConfig();
-  }
+  // ── Init ──────────────────────────────────────────────────
+  loadLocal();
+  if (items.length > 0) render();
+  if (cfg.user && cfg.token) fetchList();
+  else openConfig();
 </script>
 
 </body>
