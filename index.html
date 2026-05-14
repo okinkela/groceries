@@ -112,12 +112,13 @@ header h1 span { font-style: italic; color: var(--accent); }
 }
 
 .item-delete-bg {
-  position: absolute; inset: 0;
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 90px;
   background: var(--danger);
-  display: flex; align-items: center; justify-content: flex-end;
-  padding-right: 22px; color: white;
-  font-size: 0.85rem; font-weight: 500; letter-spacing: 0.3px;
-  gap: 7px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 0.85rem; font-weight: 500;
+  gap: 5px; border-radius: 12px;
+  cursor: pointer;
 }
 
 .item {
@@ -157,30 +158,6 @@ header h1 span { font-style: italic; color: var(--accent); }
   font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: var(--ink-light); cursor: pointer;
 }
 .clear-btn:active { border-color: var(--danger); color: var(--danger); }
-
-/* Confirm sheet */
-.confirm-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.35); z-index: 100; align-items: flex-end;
-}
-.confirm-overlay.open { display: flex; }
-
-.confirm-sheet {
-  background: var(--card); border-radius: 20px 20px 0 0;
-  padding: 28px 24px calc(28px + env(safe-area-inset-bottom));
-  width: 100%; animation: slideUp 0.22s ease;
-}
-.confirm-sheet p { font-size: 1rem; margin-bottom: 20px; color: var(--ink); }
-.confirm-sheet p strong { font-weight: 500; }
-.confirm-del {
-  width: 100%; background: var(--danger); color: white; border: none;
-  border-radius: 12px; padding: 14px; margin-bottom: 10px;
-  font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 500; cursor: pointer;
-}
-.confirm-cancel {
-  width: 100%; background: none; border: none; color: var(--ink-light);
-  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
-}
 
 /* Config sheet */
 .config-overlay {
@@ -259,16 +236,6 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
 
 <div class="list-wrap" id="listWrap"></div>
 <div class="toast" id="toast"></div>
-
-<!-- Delete confirm -->
-
-<div class="confirm-overlay" id="confirmOverlay">
-  <div class="confirm-sheet">
-    <p>Remove <strong id="confirmName"></strong> from the list?</p>
-    <button class="confirm-del" onclick="confirmDelete()">Remove</button>
-    <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
-  </div>
-</div>
 
 <!-- Config -->
 
@@ -422,11 +389,6 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
 
     if (done.length > 0) {
       done.forEach(item => wrap.appendChild(makeItemEl(item)));
-      const btn = document.createElement('button');
-      btn.className = 'clear-btn';
-      btn.textContent = 'Clear checked items';
-      btn.onclick = clearChecked;
-      wrap.appendChild(btn);
     }
 
     if (scrollToId) {
@@ -476,8 +438,8 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
 
   // ── Swipe left to delete ──────────────────────────────────
   function attachSwipe(el, item) {
-    let startX = 0, curX = 0, active = false;
-    const THRESHOLD = 80;
+    let startX = 0, curX = 0, active = false, revealed = false;
+    const REVEAL = 90;
 
     el.addEventListener('touchstart', e => {
       startX = e.touches[0].clientX;
@@ -488,40 +450,45 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
     el.addEventListener('touchmove', e => {
       if (!active) return;
       const dx = e.touches[0].clientX - startX;
-      if (dx > 0) return;
-      curX = dx;
-      el.style.transform = `translateX(${Math.max(dx, -120)}px)`;
+      if (revealed) {
+        const newX = -REVEAL + dx;
+        const clamped = Math.min(0, Math.max(newX, -REVEAL));
+        el.style.marginRight = Math.abs(clamped) + 'px';
+        curX = clamped;
+      } else {
+        if (dx > 0) return;
+        curX = dx;
+        el.style.marginRight = Math.min(Math.abs(dx), REVEAL) + 'px';
+      }
     }, { passive: true });
 
     el.addEventListener('touchend', () => {
       if (!active) return;
       active = false;
-      el.style.transition = 'transform 0.2s ease';
-      el.style.transform = 'translateX(0)';
-      if (curX < -THRESHOLD) askDelete(item.id, item.name);
+      el.style.transition = 'margin-right 0.2s ease';
+      if (revealed) {
+        if (curX > -REVEAL / 2) {
+          el.style.marginRight = '0px';
+          revealed = false;
+        } else {
+          el.style.marginRight = REVEAL + 'px';
+        }
+      } else {
+        if (curX < -REVEAL / 2) {
+          el.style.marginRight = REVEAL + 'px';
+          revealed = true;
+        } else {
+          el.style.marginRight = '0px';
+        }
+      }
     });
-  }
 
-  // ── Delete confirm ────────────────────────────────────────
-  let pendingDeleteId = null;
-
-  function askDelete(id, name) {
-    pendingDeleteId = id;
-    document.getElementById('confirmName').textContent = name;
-    document.getElementById('confirmOverlay').classList.add('open');
-  }
-
-  function confirmDelete() {
-    if (pendingDeleteId) {
-      items = items.filter(i => i.id !== pendingDeleteId);
+    // Tap red bg to delete
+    const wrap = el.parentElement;
+    wrap.querySelector('.item-delete-bg').addEventListener('click', () => {
+      items = items.filter(i => i.id !== item.id);
       markDirty(); render();
-    }
-    closeConfirm();
-  }
-
-  function closeConfirm() {
-    pendingDeleteId = null;
-    document.getElementById('confirmOverlay').classList.remove('open');
+    });
   }
 
   // ── Actions ───────────────────────────────────────────────
