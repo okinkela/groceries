@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Groceries" />
+  <title>Groceries</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --card: #ffffff;
+      --ink: #1a1a1a;
+      --ink-light: #888;
+      --accent: #2d6a4f;
+      --accent-light: #d8f3dc;
+      --danger: #c1440e;
+      --border: #e8e2d9;
+      --checked-bg: #f0f0ec;
+      --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+
+```
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 52px 24px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2rem;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+
+header h1 span {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.sync-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--ink-light);
+  font-weight: 300;
+}
+
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-light);
+  transition: background 0.3s;
+}
+.sync-dot.syncing { background: #f0a500; animation: pulse 1s infinite; }
+.sync-dot.ok { background: var(--accent); }
+.sync-dot.error { background: var(--danger); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+
+.add-bar {
+  display: flex;
+  gap: 10px;
+  padding: 16px 24px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 101px;
+  z-index: 9;
+}
+
+.add-bar input {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.add-bar input:focus { border-color: var(--accent); }
+.add-bar input::placeholder { color: var(--ink-light); }
+
+.add-bar button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  width: 48px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-bar button:active { opacity: 0.8; transform: scale(0.95); }
+
+.list-wrap {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+
+.item {
+  background: var(--card);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: opacity 0.2s, transform 0.15s;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.item.checked {
+  background: var(--checked-bg);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.item.checked .item-name {
+  text-decoration: line-through;
+  color: var(--ink-light);
+}
+
+.check-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: white;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.item.checked .check-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.check-btn svg { display: none; }
+.item.checked .check-btn svg { display: block; }
+
+.item-name {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--ink);
+  transition: color 0.2s;
+}
+
+.del-btn {
+  background: none;
+  border: none;
+  color: var(--ink-light);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+}
+
+.del-btn:active { opacity: 1; color: var(--danger); }
+
+.empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--ink-light);
+}
+
+.empty p:first-child {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.3rem;
+  font-style: italic;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.empty p:last-child { font-size: 0.85rem; font-weight: 300; }
+
+.clear-btn {
+  display: block;
+  margin: 8px auto 24px;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  color: var(--ink-light);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.clear-btn:active { border-color: var(--danger); color: var(--danger); }
+
+/* Config screen */
+.config-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  align-items: flex-end;
+}
+.config-overlay.open { display: flex; }
+
+.config-sheet {
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
+  width: 100%;
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.config-sheet h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+}
+
+.config-sheet p {
+  font-size: 0.8rem;
+  color: var(--ink-light);
+  margin-bottom: 20px;
+  font-weight: 300;
+}
+
+.config-sheet label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 6px;
+}
+
+.config-sheet input {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+  margin-bottom: 16px;
+  font-family: monospace;
+}
+
+.config-sheet input:focus { border-color: var(--accent); }
+
+.config-save {
+  width: 100%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.config-cancel {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--ink-light);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.gear-btn {
+  position: absolute;
+  top: 52px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: var(--ink-light);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.toast {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ink);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  transition: transform 0.3s ease;
+  z-index: 200;
+  white-space: nowrap;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+```
+
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Our <span>Groceries</span></h1>
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncLabel">Not configured</span>
+  </div>
+  <button class="gear-btn" onclick="openConfig()" aria-label="Settings">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+</header>
+
+<div class="add-bar">
+  <input type="text" id="newItem" placeholder="Add an item…" autocomplete="off" autocorrect="off" />
+  <button onclick="addItem()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  </button>
+</div>
+
+<div class="list-wrap" id="listWrap"></div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Config sheet -->
+
+<div class="config-overlay" id="configOverlay">
+  <div class="config-sheet">
+    <h2>Setup</h2>
+    <p>Enter your GitHub details. Only needed once per device.</p>
+    <label>GitHub Username</label>
+    <input type="text" id="cfgUser" placeholder="yourname" autocomplete="off" autocorrect="off" autocapitalize="off" />
+    <label>Repository Name</label>
+    <input type="text" id="cfgRepo" placeholder="groceries" autocomplete="off" autocorrect="off" autocapitalize="off" />
+    <label>Personal Access Token</label>
+    <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
+    <button class="config-save" onclick="saveConfig()">Save & Sync</button>
+    <button class="config-cancel" onclick="closeConfig()">Cancel</button>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  let cfg = {
+    user: localStorage.getItem('gh_user') || '',
+    repo: localStorage.getItem('gh_repo') || 'groceries',
+    token: localStorage.getItem('gh_token') || ''
+  };
+
+  let items = [];
+  let fileSha = '';
+
+  // ── Sync status ─────────────────────────────────────────
+  function setSync(state, msg) {
+    const dot = document.getElementById('syncDot');
+    const lbl = document.getElementById('syncLabel');
+    dot.className = 'sync-dot ' + state;
+    lbl.textContent = msg;
+  }
+
+  // ── Toast ────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── GitHub API ───────────────────────────────────────────
+  function apiUrl() {
+    return `https://api.github.com/repos/${cfg.user}/${cfg.repo}/contents/groceries.json`;
+  }
+
+  async function fetchList() {
+    if (!cfg.user || !cfg.token) { openConfig(); return; }
+    setSync('syncing', 'Syncing…');
+    try {
+      const res = await fetch(apiUrl(), {
+        headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github.v3+json' }
+      });
+      if (!res.ok) throw new Error('Fetch failed');
+      const data = await res.json();
+      fileSha = data.sha;
+      items = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      render();
+      setSync('ok', 'Synced just now');
+    } catch(e) {
+      setSync('error', 'Sync failed — tap ⚙ to check settings');
+    }
+  }
+
+  async function pushList() {
+    setSync('syncing', 'Saving…');
+    try {
+      const body = {
+        message: 'update groceries',
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(items)))),
+        sha: fileSha
+      };
+      const res = await fetch(apiUrl(), {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${cfg.token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Push failed');
+      const data = await res.json();
+      fileSha = data.content.sha;
+      setSync('ok', 'Saved');
+    } catch(e) {
+      setSync('error', 'Save failed');
+      showToast('Could not save — check your connection');
+    }
+  }
+
+  // ── Render ───────────────────────────────────────────────
+  function render() {
+    const wrap = document.getElementById('listWrap');
+    const pending = items.filter(i => !i.checked);
+    const done = items.filter(i => i.checked);
+
+    if (items.length === 0) {
+      wrap.innerHTML = `<div class="empty"><p>Nothing yet</p><p>Add your first item above</p></div>`;
+      return;
+    }
+
+    let html = '';
+
+    if (pending.length > 0) {
+      html += `<div class="section-label">To get</div>`;
+      pending.forEach(item => { html += itemHTML(item); });
+    }
+
+    if (done.length > 0) {
+      html += `<div class="section-label">In the cart</div>`;
+      done.forEach(item => { html += itemHTML(item); });
+      html += `<button class="clear-btn" onclick="clearChecked()">Clear checked items</button>`;
+    }
+
+    wrap.innerHTML = html;
+  }
+
+  function itemHTML(item) {
+    return `
+      <div class="item ${item.checked ? 'checked' : ''}" id="item-${item.id}">
+        <button class="check-btn" onclick="toggle('${item.id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </button>
+        <span class="item-name">${escHtml(item.name)}</span>
+        <button class="del-btn" onclick="deleteItem('${item.id}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>`;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Actions ──────────────────────────────────────────────
+  function addItem() {
+    const input = document.getElementById('newItem');
+    const name = input.value.trim();
+    if (!name) return;
+    items.unshift({ id: Date.now().toString(), name, checked: false });
+    input.value = '';
+    render();
+    pushList();
+  }
+
+  function toggle(id) {
+    const item = items.find(i => i.id === id);
+    if (item) { item.checked = !item.checked; render(); pushList(); }
+  }
+
+  function deleteItem(id) {
+    items = items.filter(i => i.id !== id);
+    render();
+    pushList();
+  }
+
+  function clearChecked() {
+    items = items.filter(i => !i.checked);
+    render();
+    pushList();
+  }
+
+  // ── Enter key ────────────────────────────────────────────
+  document.getElementById('newItem').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addItem();
+  });
+
+  // ── Pull to refresh (simple scroll detection) ────────────
+  let startY = 0;
+  document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
+  document.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - startY > 80 && window.scrollY === 0) fetchList();
+  });
+
+  // ── Config sheet ─────────────────────────────────────────
+  function openConfig() {
+    document.getElementById('cfgUser').value = cfg.user;
+    document.getElementById('cfgRepo').value = cfg.repo;
+    document.getElementById('cfgToken').value = cfg.token;
+    document.getElementById('configOverlay').classList.add('open');
+  }
+
+  function closeConfig() {
+    document.getElementById('configOverlay').classList.remove('open');
+  }
+
+  function saveConfig() {
+    cfg.user = document.getElementById('cfgUser').value.trim();
+    cfg.repo = document.getElementById('cfgRepo').value.trim();
+    cfg.token = document.getElementById('cfgToken').value.trim();
+    localStorage.setItem('gh_user', cfg.user);
+    localStorage.setItem('gh_repo', cfg.repo);
+    localStorage.setItem('gh_token', cfg.token);
+    closeConfig();
+    fetchList();
+  }
+
+  // ── Auto-refresh every 30s ────────────────────────────────
+  setInterval(fetchList, 30000);
+
+  // ── Init ─────────────────────────────────────────────────
+  if (cfg.user && cfg.token) {
+    fetchList();
+  } else {
+    openConfig();
+  }
+</script>
+
+</body>
+</html>
