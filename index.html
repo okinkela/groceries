@@ -84,7 +84,7 @@ header h1 span { font-style: italic; color: var(--accent); }
 }
 
 .add-bar {
-  display: flex; gap: 10px; padding: 16px 24px;
+  display: flex; gap: 10px; padding: 12px 12px;
   background: var(--card); border-bottom: 1px solid var(--border);
   position: sticky; top: 101px; z-index: 9;
 }
@@ -112,7 +112,7 @@ header h1 span { font-style: italic; color: var(--accent); }
 }
 .filter-btn.active { opacity: 1; }
 
-.list-wrap { padding: 8px 24px; display: flex; flex-direction: column; gap: 4px; }
+.list-wrap { padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
 
 .section-label {
   font-size: 0.7rem; font-weight: 500; letter-spacing: 1.5px;
@@ -225,20 +225,6 @@ header h1 span { font-style: italic; color: var(--accent); }
 
 mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1px; }
 
-/* Category row in add bar */
-.cat-row {
-  display: none; flex-wrap: wrap; gap: 6px;
-  padding: 0 24px 12px; background: var(--card);
-  border-bottom: 1px solid var(--border);
-}
-.cat-row.visible { display: flex; }
-.cat-chip {
-  border: 1.5px solid var(--border); border-radius: 20px;
-  padding: 4px 10px; font-size: 0.9rem; background: var(--bg);
-  cursor: pointer; transition: all 0.15s; white-space: nowrap;
-}
-.cat-chip.selected { border-color: var(--accent); background: var(--accent-light, #d8f3dc); }
-
 /* Category icon on item */
 .cat-icon {
   font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
@@ -320,8 +306,6 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
     </svg>
   </button>
 </div>
-<div class="cat-row" id="catRow"></div>
-
 <div class="list-wrap" id="listWrap"></div>
 <div class="toast" id="toast"></div>
 
@@ -628,7 +612,6 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
     input.value = '';
     filter = '';
     newItemCategory = 'other';
-    renderCatRow();
     markDirty();
     render(id);
   }
@@ -699,17 +682,7 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
   // ── Enter key + live filter ───────────────────────────────
   const newItemInput = document.getElementById('newItem');
   newItemInput.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
-  newItemInput.addEventListener('input', e => {
-    filter = e.target.value;
-    const catRow = document.getElementById('catRow');
-    if (filter.trim()) {
-      catRow.classList.add('visible');
-      renderCatRow();
-    } else {
-      catRow.classList.remove('visible');
-    }
-    render();
-  });
+  newItemInput.addEventListener('input', e => { filter = e.target.value; render(); });
 
   // ── Pull to refresh ───────────────────────────────────────
   let startY = 0;
@@ -764,19 +737,6 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
       btn.classList.remove('active');
       btn.innerHTML = `<span style="font-size:1.2rem">🛒</span>`;
     }
-  }
-
-  // ── Category row (shown while typing new item) ────────────
-  function renderCatRow() {
-    const row = document.getElementById('catRow');
-    row.innerHTML = '';
-    CATEGORIES.forEach(cat => {
-      const chip = document.createElement('button');
-      chip.className = 'cat-chip' + (cat.id === newItemCategory ? ' selected' : '');
-      chip.textContent = cat.icon + ' ' + cat.label;
-      chip.onclick = () => { newItemCategory = cat.id; renderCatRow(); };
-      row.appendChild(chip);
-    });
   }
 
   // ── Category picker for existing items ────────────────────
