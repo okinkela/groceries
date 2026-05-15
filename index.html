@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="hr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Groceries" />
-  <title>Groceries</title>
+  <meta name="apple-mobile-web-app-title" content="Namirnice" />
+  <title>Namirnice</title>
   <link rel="apple-touch-icon" href="icon.png" />
   <meta name="theme-color" content="#2d6a4f" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -75,6 +78,10 @@ header h1 span { font-style: italic; color: var(--accent); }
   position: absolute; top: 52px; right: 56px;
   background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 4px;
 }
+.clear-header-btn {
+  position: absolute; top: 52px; right: 92px;
+  background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 4px;
+}
 
 .add-bar {
   display: flex; gap: 10px; padding: 16px 24px;
@@ -91,13 +98,21 @@ header h1 span { font-style: italic; color: var(--accent); }
 .add-bar input::placeholder { color: var(--ink-light); }
 
 .add-bar button {
-  background: var(--accent); color: white; border: none; border-radius: 10px;
+  background: transparent; color: var(--accent); border: none; border-radius: 10px;
   width: 48px; cursor: pointer; transition: opacity 0.15s, transform 0.1s;
   display: flex; align-items: center; justify-content: center;
 }
 .add-bar button:active { opacity: 0.8; transform: scale(0.95); }
 
-.list-wrap { padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+.filter-btn {
+  background: transparent; border: none; border-radius: 10px;
+  width: 48px; height: 48px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; transition: opacity 0.2s;
+}
+.filter-btn.active { opacity: 1; }
+
+.list-wrap { padding: 8px 24px; display: flex; flex-direction: column; gap: 4px; }
 
 .section-label {
   font-size: 0.7rem; font-weight: 500; letter-spacing: 1.5px;
@@ -127,7 +142,7 @@ header h1 span { font-style: italic; color: var(--accent); }
 
 .item {
   position: relative; background: var(--card); border-radius: 12px;
-  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px; padding: 8px 16px;
   box-shadow: var(--shadow); border: 1px solid var(--border);
   transition: background 0.2s; touch-action: pan-y;
   user-select: none; will-change: transform;
@@ -147,7 +162,7 @@ header h1 span { font-style: italic; color: var(--accent); }
 .item.checked .item-name { color: var(--ink); }
 .item:not(.checked) .check-btn { background: white; border-color: var(--border); }
 .item:not(.checked) .item-name { color: var(--ink-light); }
-.item-name { flex: 1; font-size: 1rem; font-weight: 400; transition: color 0.2s; }
+.item-name { flex: 1; font-size: 1.3rem; font-weight: 400; transition: color 0.2s; }
 
 .empty { text-align: center; padding: 60px 24px; color: var(--ink-light); }
 .empty p:first-child {
@@ -209,6 +224,59 @@ header h1 span { font-style: italic; color: var(--accent); }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
 mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1px; }
+
+/* Category row in add bar */
+.cat-row {
+  display: none; flex-wrap: wrap; gap: 6px;
+  padding: 0 24px 12px; background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.cat-row.visible { display: flex; }
+.cat-chip {
+  border: 1.5px solid var(--border); border-radius: 20px;
+  padding: 4px 10px; font-size: 0.9rem; background: var(--bg);
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.cat-chip.selected { border-color: var(--accent); background: var(--accent-light, #d8f3dc); }
+
+/* Category icon on item */
+.cat-icon {
+  font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
+  opacity: 0.7; transition: opacity 0.15s;
+}
+.cat-icon:active { opacity: 1; }
+
+/* Category picker overlay */
+.cat-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35); z-index: 100; align-items: flex-end;
+}
+.cat-overlay.open { display: flex; }
+.cat-sheet {
+  background: var(--card); border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  width: 100%; animation: slideUp 0.22s ease;
+}
+.cat-sheet h3 {
+  font-family: 'DM Serif Display', serif; font-size: 1.2rem;
+  margin-bottom: 16px; color: var(--ink);
+}
+.cat-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  margin-bottom: 16px;
+}
+.cat-option {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 6px; border-radius: 12px; border: 1.5px solid var(--border);
+  background: var(--bg); cursor: pointer; transition: all 0.15s;
+}
+.cat-option.selected { border-color: var(--accent); background: #d8f3dc; }
+.cat-option span:first-child { font-size: 1.5rem; }
+.cat-option span:last-child { font-size: 0.65rem; color: var(--ink-light); text-align: center; }
+.cat-close {
+  width: 100%; background: none; border: none; color: var(--ink-light);
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
+}
 ```
 
   </style>
@@ -216,10 +284,9 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
 <body>
 
 <header>
-  <h1>Our <span>Groceries</span></h1>
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
-    <span id="syncLabel">Not configured</span>
+    <span id="syncLabel">Nije konfigurirano</span>
   </div>
   <button class="gear-btn" onclick="openConfig()" aria-label="Settings">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -234,30 +301,60 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
       <line x1="12" y1="2" x2="12" y2="15"/>
     </svg>
   </button>
+  <button class="clear-header-btn" onclick="clearToBuy()" aria-label="Clear to buy">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+  </button>
 </header>
 
 <div class="add-bar">
-  <input type="text" id="newItem" placeholder="Add an item…" autocomplete="off" autocorrect="off" />
+  <input type="text" id="newItem" placeholder="Dodaj / pretraži artikl…" autocomplete="off" autocorrect="off" />
+  <button class="filter-btn" id="filterBtn" onclick="openCatFilter()" aria-label="Filtriraj po kategoriji">
+    <span style="font-size:1.2rem">🛒</span>
+  </button>
   <button onclick="addItem()">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
       <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
   </button>
 </div>
+<div class="cat-row" id="catRow"></div>
 
 <div class="list-wrap" id="listWrap"></div>
 <div class="toast" id="toast"></div>
+
+<!-- Category filter picker -->
+
+<div class="cat-overlay" id="catFilterOverlay">
+  <div class="cat-sheet">
+    <h3>Filtriraj po kategoriji</h3>
+    <div class="cat-grid" id="catFilterGrid"></div>
+    <button class="cat-close" onclick="closeCatFilter()">Gotovo</button>
+  </div>
+</div>
+
+<!-- Category picker -->
+
+<div class="cat-overlay" id="catOverlay">
+  <div class="cat-sheet">
+    <h3>Kategorija</h3>
+    <div class="cat-grid" id="catGrid"></div>
+    <button class="cat-close" onclick="closeCatPicker()">Odustani</button>
+  </div>
+</div>
 
 <!-- Config -->
 
 <div class="config-overlay" id="configOverlay">
   <div class="config-sheet">
-    <h2>Setup</h2>
-    <p>Enter your GitHub personal access token. Only needed once per device.</p>
-    <label>Personal Access Token</label>
+    <h2>Postavke</h2>
+    <p>Unesite GitHub osobni token. Potrebno samo jednom po uređaju.</p>
+    <label>Osobni token</label>
     <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
-    <button class="config-save" onclick="saveConfig()">Save & Sync</button>
-    <button class="config-cancel" onclick="closeConfig()">Cancel</button>
+    <button class="config-save" onclick="saveConfig()">Spremi & Sinkroniziraj</button>
+    <button class="config-cancel" onclick="closeConfig()">Odustani</button>
   </div>
 </div>
 
@@ -274,6 +371,23 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
   let dirty   = false;
   let pushing = false;
   let filter  = '';
+  let newItemCategory = 'other';
+  let filterCategory = null; // null = all
+
+  const CATEGORIES = [
+    { id: 'produce',   icon: '🥦', label: 'Voće i povrće' },
+    { id: 'meat',      icon: '🥩', label: 'Meso i riba' },
+    { id: 'dairy',     icon: '🥛', label: 'Mliječni' },
+    { id: 'bakery',    icon: '🥖', label: 'Pekara' },
+    { id: 'pantry',    icon: '🥫', label: 'Ostava' },
+    { id: 'drinks',    icon: '🍷', label: 'Pića' },
+    { id: 'frozen',    icon: '❄️', label: 'Smrznuto' },
+    { id: 'care',      icon: '🧴', label: 'Higijena' },
+    { id: 'household', icon: '🧹', label: 'Kućanstvo' },
+    { id: 'other',     icon: '📦', label: 'Ostalo' },
+  ];
+
+  function catById(id) { return CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1]; }
 
   // ── Local persistence ────────────────────────────────────
   function saveLocal() {
@@ -309,7 +423,7 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
   async function fetchList() {
     if (!cfg.user || !cfg.token) { openConfig(); return; }
     if (dirty) return; // don't overwrite unsaved local changes
-    setSync('syncing', 'Syncing…');
+    setSync('syncing', 'Sinkronizacija…');
     try {
       const res = await fetch(apiUrl(), {
         headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github.v3+json' }
@@ -320,16 +434,16 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
       items   = JSON.parse(atob(data.content.replace(/\n/g, '')));
       saveLocal();
       render();
-      setSync('ok', 'Synced just now');
+      setSync('ok', 'Sinkronizirano');
     } catch {
-      setSync('error', 'Sync failed — will retry');
+      setSync('error', 'Greška — pokušavam ponovo');
     }
   }
 
   async function pushList() {
     if (!cfg.user || !cfg.token || pushing) return;
     pushing = true;
-    setSync('syncing', 'Saving…');
+    setSync('syncing', 'Spremanje…');
     try {
       const res = await fetch(apiUrl(), {
         method: 'PUT',
@@ -349,9 +463,9 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
       fileSha = data.content.sha;
       saveLocal();
       dirty = false;
-      setSync('ok', 'Saved');
+      setSync('ok', 'Spremljeno');
     } catch {
-      setSync('dirty', 'Not saved — will retry');
+      setSync('dirty', 'Nije spremljeno — pokušavam ponovo');
     } finally {
       pushing = false;
     }
@@ -360,7 +474,7 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
   function markDirty() {
     dirty = true;
     saveLocal();
-    setSync('dirty', 'Pending save…');
+    setSync('dirty', 'Čeka spremanje…');
   }
 
   // Every 30s: push if dirty, fetch if clean
@@ -369,32 +483,32 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
   // ── Render ────────────────────────────────────────────────
   function render(scrollToId) {
     const wrap = document.getElementById('listWrap');
-    const q    = filter.toLowerCase().trim();
+    const q = filter.toLowerCase().trim();
+    let visible = items;
+    if (filterCategory) visible = visible.filter(i => i.category === filterCategory);
+    if (q) visible = visible.filter(i => i.name.toLowerCase().includes(q));
 
-    // When filtering, show all matching items flat (no sections)
-    if (q) {
-      const matches = items.filter(i => i.name.toLowerCase().includes(q));
-      wrap.innerHTML = '';
-      if (matches.length === 0) {
-        wrap.innerHTML = `<div class="empty"><p>No matches</p><p>Tap + to add "${escHtml(filter)}"</p></div>`;
+    wrap.innerHTML = '';
+
+    if (q || filterCategory) {
+      if (visible.length === 0) {
+        wrap.innerHTML = `<div class="empty"><p>Nema rezultata</p><p>Tapni + za dodati "${escHtml(filter)}"</p></div>`;
       } else {
-        matches.forEach(item => wrap.appendChild(makeItemEl(item, q)));
+        visible.forEach(item => wrap.appendChild(makeItemEl(item, q || null)));
       }
       return;
     }
 
-    const pending = items.filter(i =>  i.checked);
-    const done    = items.filter(i => !i.checked);
+    const pending = visible.filter(i =>  i.checked);
+    const done    = visible.filter(i => !i.checked);
 
-    wrap.innerHTML = '';
-
-    if (items.length === 0) {
-      wrap.innerHTML = `<div class="empty"><p>Nothing yet</p><p>Add your first item above</p></div>`;
+    if (visible.length === 0) {
+      wrap.innerHTML = `<div class="empty"><p>Još ništa</p><p>Dodaj prvi artikl gore</p></div>`;
       return;
     }
 
     if (pending.length > 0) {
-      wrap.appendChild(sectionLabel('To get'));
+      wrap.appendChild(sectionLabel('Za kupiti'));
       pending.forEach(item => wrap.appendChild(makeItemEl(item)));
     }
 
@@ -431,16 +545,18 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
         <path d="M19 6l-1 14H6L5 6"/>
         <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
       </svg>
-      Remove`;
+      Ukloni`;
     wrap.appendChild(bg);
 
     // Item row
     const el = document.createElement('div');
     el.className = 'item' + (item.checked ? ' checked' : '');
     const displayName = highlight ? highlightMatch(item.name, highlight) : escHtml(item.name);
+    const cat = catById(item.category);
     el.innerHTML = `
       <button class="check-btn" onclick="toggle('${item.id}')"></button>
       <span class="item-name">${displayName}</span>
+      <span class="cat-icon" onclick="openCatPicker('${item.id}')" title="${cat.label}">${cat.icon}</span>
     `;
     wrap.appendChild(el);
     attachSwipe(el, item);
@@ -508,20 +624,65 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
     const name  = input.value.trim();
     if (!name) return;
     const id = Date.now().toString();
-    items.unshift({ id, name, checked: true });
+    items.unshift({ id, name, checked: true, category: newItemCategory });
     input.value = '';
     filter = '';
+    newItemCategory = 'other';
+    renderCatRow();
     markDirty();
     render(id);
   }
 
   function toggle(id) {
     const item = items.find(i => i.id === id);
-    if (item) { item.checked = !item.checked; markDirty(); render(); }
+    if (!item) return;
+
+    // FLIP: record positions before change
+    const wrap = document.getElementById('listWrap');
+    const before = {};
+    wrap.querySelectorAll('.item-wrap[id]').forEach(el => {
+      before[el.id] = el.getBoundingClientRect().top;
+    });
+
+    // Flash the button green/grey before sort
+    const itemEl = document.querySelector(`#wrap-${id} .item`);
+    if (itemEl) {
+      itemEl.style.transition = 'background 0.15s';
+      itemEl.style.background = '#d8f3dc';
+      setTimeout(() => { itemEl.style.background = ''; }, 200);
+    }
+
+    // Apply change after brief flash
+    setTimeout(() => {
+      item.checked = !item.checked;
+      markDirty();
+      render();
+
+      // FLIP: animate from old positions to new
+      requestAnimationFrame(() => {
+        wrap.querySelectorAll('.item-wrap[id]').forEach(el => {
+          if (before[el.id] === undefined) return;
+          const after = el.getBoundingClientRect().top;
+          const delta = before[el.id] - after;
+          if (Math.abs(delta) < 2) return;
+          el.style.transition = 'none';
+          el.style.transform = `translateY(${delta}px)`;
+          requestAnimationFrame(() => {
+            el.style.transition = 'transform 0.8s cubic-bezier(0.4,0,0.2,1)';
+            el.style.transform = 'translateY(0)';
+          });
+        });
+      });
+    }, 200);
   }
 
   function clearChecked() {
     items = items.filter(i => !i.checked);
+    markDirty(); render();
+  }
+
+  function clearToBuy() {
+    items.forEach(i => { if (i.checked) i.checked = false; });
     markDirty(); render();
   }
 
@@ -538,7 +699,17 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
   // ── Enter key + live filter ───────────────────────────────
   const newItemInput = document.getElementById('newItem');
   newItemInput.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
-  newItemInput.addEventListener('input', e => { filter = e.target.value; render(); });
+  newItemInput.addEventListener('input', e => {
+    filter = e.target.value;
+    const catRow = document.getElementById('catRow');
+    if (filter.trim()) {
+      catRow.classList.add('visible');
+      renderCatRow();
+    } else {
+      catRow.classList.remove('visible');
+    }
+    render();
+  });
 
   // ── Pull to refresh ───────────────────────────────────────
   let startY = 0;
@@ -559,15 +730,91 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
     closeConfig(); fetchList();
   }
 
+  // ── Category filter ───────────────────────────────────────
+  function openCatFilter() {
+    const grid = document.getElementById('catFilterGrid');
+    grid.innerHTML = '';
+    // Add "All" option
+    const all = document.createElement('button');
+    all.className = 'cat-option' + (!filterCategory ? ' selected' : '');
+    all.innerHTML = `<span>🛒</span><span>Sve</span>`;
+    all.onclick = () => { filterCategory = null; updateFilterBtn(); closeCatFilter(); render(); };
+    grid.appendChild(all);
+    CATEGORIES.forEach(cat => {
+      const opt = document.createElement('button');
+      opt.className = 'cat-option' + (filterCategory === cat.id ? ' selected' : '');
+      opt.innerHTML = `<span>${cat.icon}</span><span>${cat.label}</span>`;
+      opt.onclick = () => { filterCategory = cat.id; updateFilterBtn(); closeCatFilter(); render(); };
+      grid.appendChild(opt);
+    });
+    document.getElementById('catFilterOverlay').classList.add('open');
+  }
+
+  function closeCatFilter() {
+    document.getElementById('catFilterOverlay').classList.remove('open');
+  }
+
+  function updateFilterBtn() {
+    const btn = document.getElementById('filterBtn');
+    if (filterCategory) {
+      const cat = catById(filterCategory);
+      btn.innerHTML = `<span style="font-size:1.2rem">${cat.icon}</span>`;
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+      btn.innerHTML = `<span style="font-size:1.2rem">🛒</span>`;
+    }
+  }
+
+  // ── Category row (shown while typing new item) ────────────
+  function renderCatRow() {
+    const row = document.getElementById('catRow');
+    row.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.className = 'cat-chip' + (cat.id === newItemCategory ? ' selected' : '');
+      chip.textContent = cat.icon + ' ' + cat.label;
+      chip.onclick = () => { newItemCategory = cat.id; renderCatRow(); };
+      row.appendChild(chip);
+    });
+  }
+
+  // ── Category picker for existing items ────────────────────
+  let catPickerItemId = null;
+
+  function openCatPicker(id) {
+    catPickerItemId = id;
+    const item = items.find(i => i.id === id);
+    const grid = document.getElementById('catGrid');
+    grid.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      const opt = document.createElement('button');
+      opt.className = 'cat-option' + (item && item.category === cat.id ? ' selected' : '');
+      opt.innerHTML = `<span>${cat.icon}</span><span>${cat.label}</span>`;
+      opt.onclick = () => {
+        const it = items.find(i => i.id === catPickerItemId);
+        if (it) { it.category = cat.id; markDirty(); render(); }
+        closeCatPicker();
+      };
+      grid.appendChild(opt);
+    });
+    document.getElementById('catOverlay').classList.add('open');
+  }
+
+  function closeCatPicker() {
+    catPickerItemId = null;
+    document.getElementById('catOverlay').classList.remove('open');
+  }
+
   // ── Share ─────────────────────────────────────────────────
   function shareList() {
     const toBuy = items.filter(i => i.checked);
-    if (toBuy.length === 0) { showToast('Nothing to buy yet'); return; }
-    const text = '🛒 Groceries to buy:\n' + toBuy.map(i => '• ' + i.name).join('\n');
+    if (toBuy.length === 0) { showToast('Nema artikala za kupnju'); return; }
+    const text = '🛒 Namirnice za kupiti:\n' + toBuy.map(i => '• ' + i.name).join('\n');
     if (navigator.share) {
       navigator.share({ text: text }).catch(function() {});
     } else {
-      window.prompt('Copy and share:', text);
+      window.prompt('Kopiraj i podijeli:', text);
     }
   }
 
