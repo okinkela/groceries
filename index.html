@@ -564,7 +564,11 @@ mark { background: #fff0a0; color: var(--ink); border-radius: 2px; padding: 0 1p
     const toBuy = items.filter(i => i.checked);
     if (toBuy.length === 0) { showToast('Nothing to buy yet'); return; }
     const text = '🛒 Groceries to buy:\n' + toBuy.map(i => '• ' + i.name).join('\n');
-    window.prompt('Copy and share:', text);
+    if (navigator.share) {
+      navigator.share({ text: text }).catch(function() {});
+    } else {
+      window.prompt('Copy and share:', text);
+    }
   }
 
   // ── Init ──────────────────────────────────────────────────
