@@ -188,6 +188,7 @@
       background: var(--card); border-radius: 20px 20px 0 0;
       padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
       width: 100%; animation: slideUp 0.25s ease;
+      max-height: 90vh; overflow-y: auto;
     }
     @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
 
@@ -269,9 +270,9 @@
 
     /* Quantity badge on item row */
     .qty-badge {
-      font-size: 0.75rem; color: var(--ink-light); font-weight: 400;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 6px; padding: 1px 7px; flex-shrink: 0;
+      font-size: 0.8rem; color: var(--accent); font-weight: 600;
+      background: var(--bg); border: 1.5px solid var(--accent);
+      border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
     }
 
     /* Inline quantity editor */
@@ -319,6 +320,17 @@
     }
     .qty-confirm-btn { background: var(--accent); color: white; }
     .qty-dismiss-btn { background: var(--bg); color: var(--ink-light); border: 1.5px solid var(--border); }
+
+    .cat-icon-editor { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    .cat-icon-edit-cell { cursor: pointer; }
+    .cat-icon-edit-cell .cat-icon-display { font-size: 1.8rem; }
+    .cat-icon-edit-cell.editing .cat-icon-display { display: none; }
+    .cat-icon-inp {
+      display: none; width: 2.4rem; height: 2.4rem; text-align: center; font-size: 1.4rem;
+      border: 1.5px solid var(--accent); border-radius: 8px;
+      background: white; outline: none; padding: 0; caret-color: transparent;
+    }
+    .cat-icon-edit-cell.editing .cat-icon-inp { display: block; }
 
     .sort-options {
       display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;
@@ -393,7 +405,7 @@
 <!-- Category picker -->
 <div class="cat-overlay" id="catOverlay">
   <div class="cat-sheet">
-    <h3>Kategorija</h3>
+    <h3>Promijeni kategoriju</h3>
     <div class="cat-grid" id="catGrid"></div>
     <button class="cat-close" onclick="closeCatPicker()">Odustani</button>
   </div>
@@ -410,6 +422,8 @@
       <button class="sort-option" id="sortOptCategory" onclick="setSortType('category')">Kategorija → Za kupiti → Abeceda</button>
       <button class="sort-option" id="sortOptTobuy" onclick="setSortType('tobuy')">Za kupiti → Kategorija → Abeceda</button>
     </div>
+    <label>Ikone kategorija</label>
+    <div id="catIconEditor" class="cat-icon-editor"></div>
     <div class="config-actions">
       <button class="config-cancel" onclick="closeConfig()">Odustani</button>
       <button class="config-save" onclick="saveConfig()">Spremi</button>
@@ -450,18 +464,34 @@
     { id: 'other',      icon: '❓', label: 'Ostalo' },
   ];
 
+  const _defaultIcons  = Object.fromEntries(CATEGORIES.map(c => [c.id, c.icon]));
+  let sharedCatIcons   = {};
+  let localCatIcons    = JSON.parse(localStorage.getItem('cat_icons') || '{}');
+
+  function applyCatIcons() {
+    CATEGORIES.forEach(c => {
+      c.icon = localCatIcons[c.id] ?? sharedCatIcons[c.id] ?? _defaultIcons[c.id];
+    });
+  }
+  applyCatIcons();
+
   function catById(id) { return CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1]; }
 
   // ── Local persistence ────────────────────────────────────
   function saveLocal() {
     localStorage.setItem('items_cache', JSON.stringify(items));
     localStorage.setItem('items_sha',   fileSha);
+    if (Object.keys(sharedCatIcons).length)
+      localStorage.setItem('shared_cat_icons', JSON.stringify(sharedCatIcons));
   }
 
   function loadLocal() {
     const cached = localStorage.getItem('items_cache');
     const sha    = localStorage.getItem('items_sha');
     if (cached) { items = JSON.parse(cached); fileSha = sha || ''; }
+    const sc = localStorage.getItem('shared_cat_icons');
+    if (sc) sharedCatIcons = JSON.parse(sc);
+    applyCatIcons();
   }
 
   // ── Sync status ──────────────────────────────────────────
@@ -494,7 +524,10 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       fileSha = data.sha;
-      items   = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      const raw = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      if (Array.isArray(raw)) { items = raw; }
+      else { items = raw.items || []; sharedCatIcons = raw.categoryIcons || {}; }
+      applyCatIcons();
       saveLocal();
       render();
       setSync('ok', 'Sinkronizirano');
@@ -517,7 +550,7 @@
         },
         body: JSON.stringify({
           message: 'update groceries',
-          content: btoa(unescape(encodeURIComponent(JSON.stringify(items)))),
+          content: btoa(unescape(encodeURIComponent(JSON.stringify({ items, categoryIcons: sharedCatIcons })))),
           sha: fileSha
         })
       });
@@ -805,11 +838,64 @@
     document.getElementById('sortOptCategory').classList.toggle('selected', type === 'category');
   }
 
+  function populateCatIconEditor() {
+    const editor = document.getElementById('catIconEditor');
+    editor.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      const cell = document.createElement('div');
+      cell.className = 'cat-option cat-icon-edit-cell';
+      cell.dataset.catId = cat.id;
+
+      const display = document.createElement('span');
+      display.className = 'cat-icon-display';
+      display.textContent = cat.icon;
+
+      const inp = document.createElement('input');
+      inp.className = 'cat-icon-inp';
+      inp.value = cat.icon;
+      inp.autocomplete = 'off';
+      inp.spellcheck = false;
+
+      const lbl = document.createElement('span');
+      lbl.textContent = cat.label;
+
+      cell.appendChild(display);
+      cell.appendChild(inp);
+      cell.appendChild(lbl);
+
+      function confirmEdit() {
+        const val = inp.value.trim();
+        if (val) display.textContent = val;
+        else inp.value = display.textContent;
+        cell.classList.remove('editing');
+      }
+
+      inp.addEventListener('input', () => {
+        const segs = typeof Intl !== 'undefined' && Intl.Segmenter
+          ? [...new Intl.Segmenter().segment(inp.value)] : null;
+        if (inp.value.length > 2)
+          inp.value = segs ? segs[0].segment : inp.value.slice(0, 2);
+      });
+      inp.addEventListener('blur', confirmEdit);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+
+      display.addEventListener('click', e => {
+        e.stopPropagation();
+        inp.value = display.textContent;
+        cell.classList.add('editing');
+        setTimeout(() => inp.focus(), 50);
+      });
+
+      editor.appendChild(cell);
+    });
+  }
+
   function openConfig() {
     document.getElementById('cfgToken').value = cfg.token;
     pendingSortType = sortType;
     document.getElementById('sortOptTobuy').classList.toggle('selected', sortType === 'tobuy');
     document.getElementById('sortOptCategory').classList.toggle('selected', sortType === 'category');
+    populateCatIconEditor();
     document.getElementById('configOverlay').classList.add('open');
   }
   function closeConfig() {
@@ -822,10 +908,18 @@
     if (pendingSortType !== sortType) {
       sortType = pendingSortType;
       localStorage.setItem('sort_type', sortType);
-      render();
     }
     pendingSortType = null;
+    document.querySelectorAll('.cat-icon-edit-cell').forEach(cell => {
+      const id  = cell.dataset.catId;
+      const val = cell.querySelector('.cat-icon-display').textContent.trim();
+      if (val && val !== (_defaultIcons[id])) localCatIcons[id] = val;
+      else delete localCatIcons[id];
+    });
+    localStorage.setItem('cat_icons', JSON.stringify(localCatIcons));
+    applyCatIcons();
     closeConfig();
+    render();
     fetchList();
   }
 
@@ -871,6 +965,7 @@
   function openCatPicker(id) {
     catPickerItemId = id;
     const item = items.find(i => i.id === id);
+    document.querySelector('#catOverlay h3').textContent = item ? 'Odaberi kategoriju za ‘' + item.name + '’' : 'Odaberi kategoriju';
     const grid = document.getElementById('catGrid');
     grid.innerHTML = '';
     CATEGORIES.forEach(cat => {
