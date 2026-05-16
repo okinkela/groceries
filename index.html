@@ -505,31 +505,27 @@
       return;
     }
 
-    if (q || filterCategory) {
-      visible.forEach(item => wrap.appendChild(makeItemEl(item, q || null)));
-      return;
-    }
-
     const catOrder = Object.fromEntries(CATEGORIES.map((c, i) => [c.id, i]));
-    const alpha  = (a, b) => a.name.localeCompare(b.name, 'hr');
-    const byCat  = (a, b) => (catOrder[a.category] ?? 99) - (catOrder[b.category] ?? 99);
+    const alpha = (a, b) => a.name.localeCompare(b.name, 'hr');
+    const byCat = (a, b) => (catOrder[a.category] ?? 99) - (catOrder[b.category] ?? 99);
+    const hl = q || null;
 
     if (sortType === 'tobuy') {
       const toBuy    = visible.filter(i =>  i.checked).sort((a, b) => byCat(a, b) || alpha(a, b));
       const inactive = visible.filter(i => !i.checked).sort((a, b) => byCat(a, b) || alpha(a, b));
       if (toBuy.length > 0) {
         wrap.appendChild(sectionLabel('Za kupiti'));
-        toBuy.forEach(item => wrap.appendChild(makeItemEl(item)));
+        toBuy.forEach(item => wrap.appendChild(makeItemEl(item, hl)));
       }
-      inactive.forEach(item => wrap.appendChild(makeItemEl(item)));
+      inactive.forEach(item => wrap.appendChild(makeItemEl(item, hl)));
     } else {
       CATEGORIES.forEach(cat => {
         const catItems = visible.filter(i => i.category === cat.id);
         if (catItems.length === 0) return;
         const toBuy    = catItems.filter(i =>  i.checked).sort(alpha);
         const inactive = catItems.filter(i => !i.checked).sort(alpha);
-        wrap.appendChild(sectionLabel(`${cat.icon} ${cat.label}`));
-        [...toBuy, ...inactive].forEach(item => wrap.appendChild(makeItemEl(item)));
+        if (!filterCategory) wrap.appendChild(sectionLabel(`${cat.icon} ${cat.label}`));
+        [...toBuy, ...inactive].forEach(item => wrap.appendChild(makeItemEl(item, hl)));
       });
     }
 
