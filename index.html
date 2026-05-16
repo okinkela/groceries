@@ -621,7 +621,7 @@
     el.className = 'item' + (item.checked ? ' checked' : '');
     const displayName = highlight ? highlightMatch(item.name, highlight) : escHtml(item.name);
     const cat = catById(item.category);
-    const qtyHtml = (item.qty != null && item.qty !== '')
+    const qtyHtml = (item.checked && item.qty != null && item.qty !== '')
       ? `<span class="qty-badge">${typeof item.qty === 'number' ? '× ' + item.qty : escHtml(String(item.qty))}</span>`
       : '';
     el.innerHTML = `
@@ -897,7 +897,7 @@
     if (!item) return;
 
     const qty = item.qty;
-    const isNum = typeof qty === 'number' && qty > 0;
+    const isNum = typeof qty === 'number' && qty >= 0;
     qtyCurrent = isNum ? qty : 1;
     qtyMode = (qty != null && qty !== '' && typeof qty !== 'number') ? 'text' : 'stepper';
 
@@ -937,7 +937,7 @@
   }
 
   function qtyAdjust(delta) {
-    qtyCurrent = Math.max(1, qtyCurrent + delta);
+    qtyCurrent = Math.max(0, qtyCurrent + delta);
     document.getElementById('qtyNumBtn').textContent = qtyCurrent;
   }
 
@@ -967,13 +967,27 @@
     const item = items.find(i => i.id === qtyPickerItemId);
     if (!item) return;
     if (qtyMode === 'stepper') {
-      item.qty = qtyCurrent;
+      if (qtyCurrent === 0) {
+        delete item.qty;
+        item.checked = false;
+      } else {
+        item.qty = qtyCurrent;
+        item.checked = true;
+      }
     } else {
       const val = document.getElementById('qtyTextInput').value.trim();
-      if (!val) { delete item.qty; }
-      else {
+      if (!val) {
+        delete item.qty;
+      } else {
         const n = parseInt(val, 10);
-        item.qty = (String(n) === val && n > 0) ? n : val;
+        const isZero = val === '0' || val === '00';
+        if (isZero) {
+          delete item.qty;
+          item.checked = false;
+        } else {
+          item.qty = (String(n) === val && n > 0) ? n : val;
+          item.checked = true;
+        }
       }
     }
     closeQtyPicker();
