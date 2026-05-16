@@ -381,19 +381,19 @@
   let sortType = localStorage.getItem('sort_type') || 'category';
 
   const CATEGORIES = [
-    { id: 'produce',    icon: '🍎', label: 'Voće' },
-    { id: 'vegetables', icon: '🥦', label: 'Povrće' },
+    { id: 'produce',    icon: '🍋', label: 'Voće' },
+    { id: 'vegetables', icon: '🥕', label: 'Povrće' },
     { id: 'meat',       icon: '🥩', label: 'Meso' },
-    { id: 'dairy',     icon: '🥛', label: 'Mliječni' },
-    { id: 'bakery',    icon: '🥖', label: 'Pekara' },
-    { id: 'pantry',    icon: '🥫', label: 'Ostava' },
-    { id: 'drinks',    icon: '🍷', label: 'Pića' },
-    { id: 'frozen',    icon: '❄️', label: 'Smrznuto' },
-    { id: 'care',      icon: '🧴', label: 'Higijena' },
-    { id: 'household', icon: '🧹', label: 'Kućanstvo' },
-    { id: 'fish',      icon: '🐟', label: 'Riba' },
-    { id: 'pharmacy',  icon: '💊', label: 'Ljekarna' },
-    { id: 'other',     icon: '📦', label: 'Ostalo' },
+    { id: 'dairy',      icon: '🐄', label: 'Mliječni' },
+    { id: 'bakery',     icon: '🥖', label: 'Pekara' },
+    { id: 'pantry',     icon: '🥫', label: 'Ostava' },
+    { id: 'drinks',     icon: '🍷', label: 'Pića' },
+    { id: 'frozen',     icon: '❄️', label: 'Smrznuto' },
+    { id: 'care',       icon: '🪥', label: 'Higijena' },
+    { id: 'household',  icon: '🧹', label: 'Kućanstvo' },
+    { id: 'fish',       icon: '🐟', label: 'Riba' },
+    { id: 'pharmacy',   icon: '💊', label: 'Ljekarna' },
+    { id: 'other',      icon: '❓', label: 'Ostalo' },
   ];
 
   function catById(id) { return CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1]; }
