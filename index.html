@@ -143,7 +143,8 @@
       display: flex; align-items: center; gap: 12px; padding: 8px 16px;
       box-shadow: var(--shadow); border: 1px solid var(--border);
       transition: background 0.2s; touch-action: pan-y;
-      user-select: none; will-change: transform;
+      user-select: none; -webkit-user-select: none;
+      -webkit-touch-callout: none; will-change: transform;
     }
 
     .item.checked { background: var(--checked-bg); border-color: transparent; box-shadow: none; }
@@ -1005,7 +1006,11 @@
   function shareList() {
     const toBuy = items.filter(i => i.checked);
     if (toBuy.length === 0) { showToast('Nema artikala za kupnju'); return; }
-    const text = '🛒 Namirnice za kupiti:\n' + toBuy.map(i => '• ' + i.name).join('\n');
+    const text = '🛒 Namirnice za kupiti:\n' + toBuy.map(i => {
+      if (i.qty == null || i.qty === '') return '• ' + i.name;
+      const qtyStr = typeof i.qty === 'number' ? '× ' + i.qty : i.qty;
+      return '• ' + i.name + ' (' + qtyStr + ')';
+    }).join('\n');
     if (navigator.share) {
       navigator.share({ text: text }).catch(function() {});
     } else {
