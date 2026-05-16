@@ -266,6 +266,59 @@
       font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
     }
 
+    /* Quantity badge on item row */
+    .qty-badge {
+      font-size: 0.75rem; color: var(--ink-light); font-weight: 400;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 1px 7px; flex-shrink: 0;
+    }
+
+    /* Inline quantity editor */
+    .qty-inline {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 8px 14px;
+      margin: -2px 4px 0; animation: slideIn 0.15s ease;
+    }
+    .qty-stepper-row {
+      display: flex; align-items: center; gap: 6px; flex: 1;
+    }
+    .qty-stepper-row.hidden { display: none; }
+    .qty-step-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: var(--bg);
+      font-size: 1.1rem; cursor: pointer; color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.1s;
+    }
+    .qty-step-btn:active { background: var(--border); }
+    .qty-num-btn {
+      min-width: 44px; height: 34px; padding: 0 10px;
+      border: 1.5px solid var(--accent); border-radius: 8px;
+      background: white; font-size: 1rem; font-weight: 500;
+      color: var(--accent); cursor: pointer;
+    }
+    .qty-text-row {
+      display: none; flex: 1; align-items: center; gap: 6px;
+    }
+    .qty-text-row.visible { display: flex; }
+    .qty-text-input {
+      flex: 1; border: 1.5px solid var(--accent); border-radius: 8px;
+      padding: 7px 10px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+      background: var(--bg); color: var(--ink); outline: none;
+    }
+    .qty-back-btn {
+      background: none; border: none; color: var(--ink-light); font-size: 0.75rem;
+      cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 0; flex-shrink: 0;
+    }
+    .qty-confirm-btn, .qty-dismiss-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: none;
+      cursor: pointer; font-size: 0.9rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .qty-confirm-btn { background: var(--accent); color: white; }
+    .qty-dismiss-btn { background: var(--bg); color: var(--ink-light); border: 1.5px solid var(--border); }
+
     .sort-options {
       display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;
     }
@@ -497,6 +550,7 @@
 
   // ── Render ────────────────────────────────────────────────
   function render(scrollToId) {
+    closeQtyPicker();
     const wrap = document.getElementById('listWrap');
     const q = filter.toLowerCase().trim();
     let visible = items;
@@ -573,11 +627,25 @@
     el.className = 'item' + (item.checked ? ' checked' : '');
     const displayName = highlight ? highlightMatch(item.name, highlight) : escHtml(item.name);
     const cat = catById(item.category);
+    const qtyHtml = (item.checked && item.qty != null && item.qty !== '')
+      ? `<span class="qty-badge">${typeof item.qty === 'number' ? '× ' + item.qty : escHtml(String(item.qty))}</span>`
+      : '';
     el.innerHTML = `
       <button class="check-btn" onclick="toggle('${item.id}')"></button>
       <span class="item-name">${displayName}</span>
+      ${qtyHtml}
       <span class="cat-icon" onclick="openCatPicker('${item.id}')" title="${cat.label}">${cat.icon}</span>
     `;
+
+    // Long press (touch) or right-click (desktop) to open quantity picker
+    let lpTimer = null;
+    el.addEventListener('touchstart', () => {
+      lpTimer = setTimeout(() => { lpTimer = null; openQtyPicker(item.id); }, 500);
+    }, { passive: true });
+    el.addEventListener('touchmove',  () => { clearTimeout(lpTimer); lpTimer = null; }, { passive: true });
+    el.addEventListener('touchend',   () => { clearTimeout(lpTimer); lpTimer = null; }, { passive: true });
+    el.addEventListener('contextmenu', e => { e.preventDefault(); openQtyPicker(item.id); });
+
     wrap.appendChild(el);
     attachSwipe(el, item);
     return wrap;
@@ -821,6 +889,122 @@
   function closeCatPicker() {
     catPickerItemId = null;
     document.getElementById('catOverlay').classList.remove('open');
+  }
+
+  // ── Quantity picker (inline) ──────────────────────────────
+  let qtyPickerItemId = null;
+  let qtyMode = 'stepper';
+  let qtyCurrent = 1;
+
+  function openQtyPicker(id) {
+    closeQtyPicker();
+    qtyPickerItemId = id;
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    const qty = item.qty;
+    const isNum = typeof qty === 'number' && qty >= 0;
+    qtyCurrent = isNum ? qty : 1;
+    qtyMode = (qty != null && qty !== '' && typeof qty !== 'number') ? 'text' : 'stepper';
+
+    const inline = document.createElement('div');
+    inline.className = 'qty-inline';
+    inline.id = 'qty-inline-' + id;
+
+    const stepperRow = document.createElement('div');
+    stepperRow.className = 'qty-stepper-row' + (qtyMode === 'text' ? ' hidden' : '');
+    stepperRow.innerHTML = `
+      <button class="qty-step-btn" onclick="qtyAdjust(-1)">−</button>
+      <button class="qty-num-btn" id="qtyNumBtn" onclick="qtySwitchToText()">${qtyCurrent}</button>
+      <button class="qty-step-btn" onclick="qtyAdjust(1)">+</button>`;
+
+    const textRow = document.createElement('div');
+    textRow.className = 'qty-text-row' + (qtyMode === 'text' ? ' visible' : '');
+    textRow.innerHTML = `
+      <input type="text" class="qty-text-input" id="qtyTextInput"
+        value="${escHtml(qtyMode === 'text' ? String(qty) : '')}"
+        placeholder="npr. 500g, 1.5kg…" autocorrect="off" />
+      <button class="qty-back-btn" onclick="qtySwitchToStepper()">← broj</button>`;
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;flex-shrink:0';
+    actions.innerHTML = `
+      <button class="qty-confirm-btn" onclick="qtySave()">✓</button>
+      <button class="qty-dismiss-btn" onclick="closeQtyPicker()">✕</button>`;
+
+    inline.appendChild(stepperRow);
+    inline.appendChild(textRow);
+    inline.appendChild(actions);
+
+    const wrap = document.getElementById('wrap-' + id);
+    if (wrap) wrap.after(inline);
+
+    if (qtyMode === 'text') setTimeout(() => document.getElementById('qtyTextInput')?.focus(), 80);
+  }
+
+  function qtyAdjust(delta) {
+    qtyCurrent = Math.max(0, qtyCurrent + delta);
+    document.getElementById('qtyNumBtn').textContent = qtyCurrent;
+  }
+
+  function qtySwitchToText() {
+    qtyMode = 'text';
+    const textRow = document.querySelector('#qty-inline-' + qtyPickerItemId + ' .qty-text-row');
+    const stepperRow = document.querySelector('#qty-inline-' + qtyPickerItemId + ' .qty-stepper-row');
+    document.getElementById('qtyTextInput').value = String(qtyCurrent);
+    stepperRow.classList.add('hidden');
+    textRow.classList.add('visible');
+    setTimeout(() => document.getElementById('qtyTextInput')?.focus(), 80);
+  }
+
+  function qtySwitchToStepper() {
+    qtyMode = 'stepper';
+    const val = document.getElementById('qtyTextInput').value.trim();
+    const n = parseInt(val, 10);
+    qtyCurrent = (!isNaN(n) && n > 0) ? n : 1;
+    document.getElementById('qtyNumBtn').textContent = qtyCurrent;
+    const textRow = document.querySelector('#qty-inline-' + qtyPickerItemId + ' .qty-text-row');
+    const stepperRow = document.querySelector('#qty-inline-' + qtyPickerItemId + ' .qty-stepper-row');
+    textRow.classList.remove('visible');
+    stepperRow.classList.remove('hidden');
+  }
+
+  function qtySave() {
+    const item = items.find(i => i.id === qtyPickerItemId);
+    if (!item) return;
+    if (qtyMode === 'stepper') {
+      if (qtyCurrent === 0) {
+        delete item.qty;
+        item.checked = false;
+      } else {
+        item.qty = qtyCurrent;
+        item.checked = true;
+      }
+    } else {
+      const val = document.getElementById('qtyTextInput').value.trim();
+      if (!val) {
+        delete item.qty;
+      } else {
+        const n = parseInt(val, 10);
+        const isZero = val === '0' || val === '00';
+        if (isZero) {
+          delete item.qty;
+          item.checked = false;
+        } else {
+          item.qty = (String(n) === val && n > 0) ? n : val;
+          item.checked = true;
+        }
+      }
+    }
+    closeQtyPicker();
+    markDirty(); render();
+  }
+
+  function closeQtyPicker() {
+    if (qtyPickerItemId) {
+      document.getElementById('qty-inline-' + qtyPickerItemId)?.remove();
+      qtyPickerItemId = null;
+    }
   }
 
   // ── Share ─────────────────────────────────────────────────
