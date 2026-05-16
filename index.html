@@ -857,25 +857,29 @@
       cell.appendChild(inp);
       cell.appendChild(lbl);
 
+      function lastGrapheme(str) {
+        if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+          const segs = [...new Intl.Segmenter().segment(str)];
+          return segs.length ? segs[segs.length - 1].segment : str;
+        }
+        return str.slice(-2);
+      }
+
       function confirmEdit() {
         const val = inp.value.trim();
-        if (val) display.textContent = val;
-        else inp.value = display.textContent;
+        if (val) display.textContent = lastGrapheme(val);
         cell.classList.remove('editing');
       }
 
       inp.addEventListener('input', () => {
-        const segs = typeof Intl !== 'undefined' && Intl.Segmenter
-          ? [...new Intl.Segmenter().segment(inp.value)] : null;
-        if (inp.value.length > 2)
-          inp.value = segs ? segs[0].segment : inp.value.slice(0, 2);
+        if (inp.value.trim()) inp.value = lastGrapheme(inp.value);
       });
       inp.addEventListener('blur', confirmEdit);
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
 
       display.addEventListener('click', e => {
         e.stopPropagation();
-        inp.value = display.textContent;
+        inp.value = '';
         cell.classList.add('editing');
         setTimeout(() => inp.focus(), 50);
       });
