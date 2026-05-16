@@ -488,6 +488,12 @@
   // Every 30s: push if dirty, fetch if clean
   setInterval(() => { dirty ? pushList() : fetchList(); }, 30000);
 
+  // Push immediately when app is backgrounded or screen locks
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && dirty) pushList();
+  });
+  window.addEventListener('pagehide', () => { if (dirty) pushList(); });
+
   // ── Render ────────────────────────────────────────────────
   function render(scrollToId) {
     const wrap = document.getElementById('listWrap');
