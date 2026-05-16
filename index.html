@@ -202,14 +202,18 @@
       background: var(--bg); color: var(--ink); outline: none; margin-bottom: 16px;
     }
     .config-sheet input:focus { border-color: var(--accent); }
+    .config-actions {
+      display: flex; gap: 10px;
+    }
     .config-save {
-      width: 100%; background: var(--accent); color: white; border: none;
-      border-radius: 12px; padding: 14px; margin-bottom: 10px;
+      flex: 1; background: var(--accent); color: white; border: none;
+      border-radius: 12px; padding: 14px;
       font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 500; cursor: pointer;
     }
     .config-cancel {
-      width: 100%; background: none; border: none; color: var(--ink-light);
-      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
+      flex: 1; background: none; border: 1.5px solid var(--border); color: var(--ink-light);
+      border-radius: 12px; padding: 14px;
+      font-family: 'DM Sans', sans-serif; font-size: 1rem; cursor: pointer;
     }
 
     .toast {
@@ -261,6 +265,24 @@
       width: 100%; background: none; border: none; color: var(--ink-light);
       font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
     }
+
+    .sort-options {
+      display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;
+    }
+    .sort-option {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border);
+      background: var(--bg); cursor: pointer; transition: all 0.15s;
+      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink-light);
+      text-align: left;
+    }
+    .sort-option::before {
+      content: ''; flex-shrink: 0;
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid var(--border); background: white; transition: all 0.15s;
+    }
+    .sort-option.selected { border-color: var(--accent); color: var(--ink); }
+    .sort-option.selected::before { border-color: var(--accent); background: var(--accent); }
   </style>
 </head>
 <body>
@@ -327,11 +349,17 @@
 <div class="config-overlay" id="configOverlay">
   <div class="config-sheet">
     <h2>Postavke</h2>
-    <p>Unesite GitHub osobni token. Potrebno samo jednom po uređaju.</p>
-    <label>Osobni token</label>
+    <label>GitHub osobni token</label>
     <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
-    <button class="config-save" onclick="saveConfig()">Spremi & Sinkroniziraj</button>
-    <button class="config-cancel" onclick="closeConfig()">Odustani</button>
+    <label>Sortiranje</label>
+    <div class="sort-options">
+      <button class="sort-option" id="sortOptCategory" onclick="setSortType('category')">Kategorija → Za kupiti → Abeceda</button>
+      <button class="sort-option" id="sortOptTobuy" onclick="setSortType('tobuy')">Za kupiti → Kategorija → Abeceda</button>
+    </div>
+    <div class="config-actions">
+      <button class="config-cancel" onclick="closeConfig()">Odustani</button>
+      <button class="config-save" onclick="saveConfig()">Spremi</button>
+    </div>
   </div>
 </div>
 
@@ -350,6 +378,7 @@
   let filter  = '';
   let newItemCategory = 'other';
   let filterCategory = null; // null = all
+  let sortType = localStorage.getItem('sort_type') || 'category';
 
   const CATEGORIES = [
     { id: 'produce',   icon: '🥦', label: 'Voće i povrće' },
@@ -469,30 +498,39 @@
 
     wrap.innerHTML = '';
 
-    if (q || filterCategory) {
-      if (visible.length === 0) {
-        wrap.innerHTML = `<div class="empty"><p>Nema rezultata</p><p>Tapni + za dodati "${escHtml(filter)}"</p></div>`;
-      } else {
-        visible.forEach(item => wrap.appendChild(makeItemEl(item, q || null)));
-      }
-      return;
-    }
-
-    const pending = visible.filter(i =>  i.checked);
-    const done    = visible.filter(i => !i.checked);
-
     if (visible.length === 0) {
-      wrap.innerHTML = `<div class="empty"><p>Još ništa</p><p>Dodaj prvi artikl gore</p></div>`;
+      wrap.innerHTML = (q || filterCategory)
+        ? `<div class="empty"><p>Nema rezultata</p><p>Tapni + za dodati "${escHtml(filter)}"</p></div>`
+        : `<div class="empty"><p>Još ništa</p><p>Dodaj prvi artikl gore</p></div>`;
       return;
     }
 
-    if (pending.length > 0) {
-      wrap.appendChild(sectionLabel('Za kupiti'));
-      pending.forEach(item => wrap.appendChild(makeItemEl(item)));
+    if (q || filterCategory) {
+      visible.forEach(item => wrap.appendChild(makeItemEl(item, q || null)));
+      return;
     }
 
-    if (done.length > 0) {
-      done.forEach(item => wrap.appendChild(makeItemEl(item)));
+    const catOrder = Object.fromEntries(CATEGORIES.map((c, i) => [c.id, i]));
+    const alpha  = (a, b) => a.name.localeCompare(b.name, 'hr');
+    const byCat  = (a, b) => (catOrder[a.category] ?? 99) - (catOrder[b.category] ?? 99);
+
+    if (sortType === 'tobuy') {
+      const toBuy    = visible.filter(i =>  i.checked).sort((a, b) => byCat(a, b) || alpha(a, b));
+      const inactive = visible.filter(i => !i.checked).sort((a, b) => byCat(a, b) || alpha(a, b));
+      if (toBuy.length > 0) {
+        wrap.appendChild(sectionLabel('Za kupiti'));
+        toBuy.forEach(item => wrap.appendChild(makeItemEl(item)));
+      }
+      inactive.forEach(item => wrap.appendChild(makeItemEl(item)));
+    } else {
+      CATEGORIES.forEach(cat => {
+        const catItems = visible.filter(i => i.category === cat.id);
+        if (catItems.length === 0) return;
+        const toBuy    = catItems.filter(i =>  i.checked).sort(alpha);
+        const inactive = catItems.filter(i => !i.checked).sort(alpha);
+        wrap.appendChild(sectionLabel(`${cat.icon} ${cat.label}`));
+        [...toBuy, ...inactive].forEach(item => wrap.appendChild(makeItemEl(item)));
+      });
     }
 
     if (scrollToId) {
@@ -687,15 +725,36 @@
   }, { passive: true });
 
   // ── Config ────────────────────────────────────────────────
+  let pendingSortType = null;
+
+  function setSortType(type) {
+    pendingSortType = type;
+    document.getElementById('sortOptTobuy').classList.toggle('selected', type === 'tobuy');
+    document.getElementById('sortOptCategory').classList.toggle('selected', type === 'category');
+  }
+
   function openConfig() {
     document.getElementById('cfgToken').value = cfg.token;
+    pendingSortType = sortType;
+    document.getElementById('sortOptTobuy').classList.toggle('selected', sortType === 'tobuy');
+    document.getElementById('sortOptCategory').classList.toggle('selected', sortType === 'category');
     document.getElementById('configOverlay').classList.add('open');
   }
-  function closeConfig() { document.getElementById('configOverlay').classList.remove('open'); }
+  function closeConfig() {
+    pendingSortType = null;
+    document.getElementById('configOverlay').classList.remove('open');
+  }
   function saveConfig() {
     cfg.token = document.getElementById('cfgToken').value.trim();
     localStorage.setItem('gh_token', cfg.token);
-    closeConfig(); fetchList();
+    if (pendingSortType !== sortType) {
+      sortType = pendingSortType;
+      localStorage.setItem('sort_type', sortType);
+      render();
+    }
+    pendingSortType = null;
+    closeConfig();
+    fetchList();
   }
 
   // ── Category filter ───────────────────────────────────────
