@@ -194,6 +194,7 @@
 
     .config-sheet h2 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 4px; }
     .config-sheet > p { font-size: 0.8rem; color: var(--ink-light); margin-bottom: 20px; font-weight: 300; }
+    .config-hint { font-size: 0.75rem; color: var(--ink-light); margin-bottom: 10px; font-weight: 300; }
     .config-sheet label {
       display: block; font-size: 0.75rem; font-weight: 500;
       letter-spacing: 1px; text-transform: uppercase; color: var(--ink-light); margin-bottom: 6px;
@@ -423,6 +424,7 @@
       <button class="sort-option" id="sortOptTobuy" onclick="setSortType('tobuy')">Za kupiti → Kategorija → Abeceda</button>
     </div>
     <label>Ikone kategorija</label>
+    <p class="config-hint">Tapni ikonu, zatim odaberi emoji na tipkovnici</p>
     <div id="catIconEditor" class="cat-icon-editor"></div>
     <div class="config-actions">
       <button class="config-cancel" onclick="closeConfig()">Odustani</button>
@@ -855,6 +857,7 @@
       inp.value = cat.icon;
       inp.autocomplete = 'off';
       inp.spellcheck = false;
+      inp.placeholder = '☺';
 
       const lbl = document.createElement('span');
       lbl.textContent = cat.label;
@@ -887,7 +890,7 @@
         e.stopPropagation();
         inp.value = '';
         cell.classList.add('editing');
-        setTimeout(() => inp.focus(), 50);
+        inp.focus();
       });
 
       editor.appendChild(cell);
