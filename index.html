@@ -9,9 +9,6 @@
   <title>Namirnice</title>
   <link rel="apple-touch-icon" href="icon.png" />
   <meta name="theme-color" content="#2d6a4f" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -45,11 +42,7 @@
       position: sticky; top: 0; z-index: 10;
     }
 
-    header h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 2rem; letter-spacing: -0.5px; color: var(--ink);
-    }
-    header h1 span { font-style: italic; color: var(--accent); }
+
 
     .sync-bar {
       display: flex; align-items: center; gap: 6px;
@@ -170,12 +163,6 @@
     }
     .empty p:last-child { font-size: 0.85rem; font-weight: 300; }
 
-    .clear-btn {
-      display: block; margin: 8px auto 24px; background: none;
-      border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 18px;
-      font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: var(--ink-light); cursor: pointer;
-    }
-    .clear-btn:active { border-color: var(--danger); color: var(--danger); }
 
     /* Config sheet */
     .config-overlay {
@@ -192,10 +179,13 @@
     }
     @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
 
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
     .config-sheet h2 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 4px; }
-    .config-sheet > p { font-size: 0.8rem; color: var(--ink-light); margin-bottom: 20px; font-weight: 300; }
     .config-hint { font-size: 0.75rem; color: var(--ink-light); margin-bottom: 10px; font-weight: 300; }
-    .config-sheet label {
+    .config-sheet label, .config-label {
       display: block; font-size: 0.75rem; font-weight: 500;
       letter-spacing: 1px; text-transform: uppercase; color: var(--ink-light); margin-bottom: 6px;
     }
@@ -383,6 +373,7 @@
 <body>
 
 <header>
+  <h1 class="sr-only">Namirnice</h1>
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncLabel">Nije konfigurirano</span>
@@ -413,7 +404,7 @@
   <button class="filter-btn" id="filterBtn" onclick="openCatFilter()" aria-label="Filtriraj po kategoriji">
     <span style="font-size:1.2rem">🛒</span>
   </button>
-  <button onclick="addItem()">
+  <button onclick="addItem()" aria-label="Dodaj artikl">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
       <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
@@ -444,14 +435,14 @@
 <div class="config-overlay" id="configOverlay">
   <div class="config-sheet">
     <h2>Postavke</h2>
-    <label>GitHub osobni token</label>
+    <label for="cfgToken">GitHub osobni token</label>
     <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
-    <label>Sortiranje</label>
+    <p class="config-label">Sortiranje</p>
     <div class="sort-options">
       <button class="sort-option" id="sortOptCategory" onclick="setSortType('category')">Kategorija → Za kupiti → Abeceda</button>
       <button class="sort-option" id="sortOptTobuy" onclick="setSortType('tobuy')">Za kupiti → Kategorija → Abeceda</button>
     </div>
-    <label>Ikone kategorija</label>
+    <p class="config-label">Ikone kategorija</p>
     <p class="config-hint">Tapni ikonu, zatim odaberi emoji na tipkovnici</p>
     <div id="catIconEditor" class="cat-icon-editor"></div>
     <div id="catIconAddRow" class="cat-icon-add-row" style="display:none"></div>
@@ -475,29 +466,28 @@
   let dirty   = false;
   let pushing = false;
   let filter  = '';
-  let newItemCategory = 'other';
   let filterCategory = null; // null = all
   let sortType = localStorage.getItem('sort_type') || 'category';
 
-  const DEFAULT_CATEGORIES = [
-    { id: 'produce',    icon: '🍋', label: 'Voće' },
-    { id: 'vegetables', icon: '🥕', label: 'Povrće' },
-    { id: 'meat',       icon: '🥩', label: 'Meso' },
-    { id: 'dairy',      icon: '🐄', label: 'Mliječni' },
-    { id: 'bakery',     icon: '🥖', label: 'Pekara' },
-    { id: 'pantry',     icon: '🥫', label: 'Ostava' },
-    { id: 'drinks',     icon: '🍷', label: 'Pića' },
-    { id: 'frozen',     icon: '❄️', label: 'Smrznuto' },
-    { id: 'care',       icon: '🪥', label: 'Higijena' },
-    { id: 'household',  icon: '🧹', label: 'Kućanstvo' },
-    { id: 'fish',       icon: '🐟', label: 'Riba' },
-    { id: 'pharmacy',   icon: '💊', label: 'Ljekarna' },
-    { id: 'other',      icon: '❓', label: 'Ostalo' },
-  ];
+  function lastGrapheme(str) {
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const segs = [...new Intl.Segmenter().segment(str)];
+      return segs.length ? segs[segs.length - 1].segment : str;
+    }
+    return str.slice(-2);
+  }
 
-  let categories    = DEFAULT_CATEGORIES.map(c => ({ ...c, _baseIcon: c.icon }));
+  let categories    = [];
   let localCatIcons = JSON.parse(localStorage.getItem('cat_icons') || '{}');
   let localCatOrder = JSON.parse(localStorage.getItem('cat_order') || 'null');
+
+  const FALLBACK_CATEGORY = { id: 'other', icon: '❓', label: 'Ostalo' };
+
+  function ensureFallbackCategory(cats) {
+    if (!cats.some(c => c.id === 'other'))
+      cats.push({ ...FALLBACK_CATEGORY, _baseIcon: FALLBACK_CATEGORY.icon });
+    return cats;
+  }
 
   function applyCatIcons() {
     categories.forEach(c => { c.icon = localCatIcons[c.id] ?? c._baseIcon; });
@@ -511,11 +501,8 @@
     return [...ordered, ...appended];
   }
 
-  categories = applyLocalOrder(categories);
-  applyCatIcons();
-
   function catById(id) {
-    return categories.find(c => c.id === id) || categories.find(c => c.id === 'other') || categories[categories.length - 1];
+    return categories.find(c => c.id === id) || categories.find(c => c.id === 'other') || { ...FALLBACK_CATEGORY };
   }
 
   // ── Local persistence ────────────────────────────────────
@@ -537,6 +524,7 @@
     if (cached) { items = JSON.parse(cached); fileSha = sha || ''; }
     const catCached = localStorage.getItem('categories_cache');
     if (catCached) categories = JSON.parse(catCached).map(c => ({ ...c, _baseIcon: c.icon }));
+    ensureFallbackCategory(categories);
     categories = applyLocalOrder(categories);
     applyCatIcons();
   }
@@ -572,13 +560,9 @@
       const data = await res.json();
       fileSha = data.sha;
       const raw = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))));
-      if (Array.isArray(raw)) {
-        items = raw;
-      } else {
-        items = raw.items || [];
-        if (raw.categories && raw.categories.length)
-          categories = raw.categories.map(c => ({ ...c, _baseIcon: c.icon }));
-      }
+      items = raw.items || [];
+      categories = (raw.categories || []).map(c => ({ ...c, _baseIcon: c.icon }));
+      ensureFallbackCategory(categories);
       categories = applyLocalOrder(categories);
       applyCatIcons();
       saveLocal();
@@ -604,10 +588,7 @@
         body: JSON.stringify({
           message: 'update groceries',
           content: btoa(unescape(encodeURIComponent(JSON.stringify({
-            categories: categories.map(c => {
-              const obj = { id: c.id, icon: c._baseIcon, label: c.label };
-              return obj;
-            }),
+            categories: categories.map(c => ({ id: c.id, icon: c._baseIcon, label: c.label })),
             items
           })))),
           sha: fileSha
@@ -667,8 +648,11 @@
       }
       inactive.forEach(item => wrap.appendChild(makeItemEl(item, hl)));
     } else {
+      const knownCatIds = new Set(categories.map(c => c.id));
       categories.forEach(cat => {
-        const catItems = visible.filter(i => i.category === cat.id);
+        const catItems = cat.id === 'other'
+          ? visible.filter(i => i.category === 'other' || !knownCatIds.has(i.category))
+          : visible.filter(i => i.category === cat.id);
         if (catItems.length === 0) return;
         const toBuy    = catItems.filter(i =>  i.checked).sort(alpha);
         const inactive = catItems.filter(i => !i.checked).sort(alpha);
@@ -799,10 +783,9 @@
     const name  = input.value.trim();
     if (!name) return;
     const id = Date.now().toString();
-    items.unshift({ id, name, checked: true, category: newItemCategory });
+    items.unshift({ id, name, checked: true, category: 'other' });
     input.value = '';
     filter = '';
-    newItemCategory = 'other';
     markDirty();
     render(id);
   }
@@ -848,11 +831,6 @@
         });
       });
     }, 200);
-  }
-
-  function clearChecked() {
-    items = items.filter(i => !i.checked);
-    markDirty(); render();
   }
 
   function clearToBuy() {
@@ -1042,23 +1020,17 @@
       cell.appendChild(inp);
       cell.appendChild(lbl);
 
-      const del = document.createElement('button');
-      del.className = 'cat-icon-delete-btn';
-      del.textContent = '✕';
-      del.title = 'Obriši kategoriju';
-      del.onclick = e => {
-        e.stopPropagation();
-        pendingCategories = pendingCategories.filter(c => c.id !== cat.id);
-        populateCatIconEditor();
-      };
-      cell.appendChild(del);
-
-      function lastGrapheme(str) {
-        if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-          const segs = [...new Intl.Segmenter().segment(str)];
-          return segs.length ? segs[segs.length - 1].segment : str;
-        }
-        return str.slice(-2);
+      if (cat.id !== 'other') {
+        const del = document.createElement('button');
+        del.className = 'cat-icon-delete-btn';
+        del.textContent = '✕';
+        del.title = 'Obriši kategoriju';
+        del.onclick = e => {
+          e.stopPropagation();
+          pendingCategories = pendingCategories.filter(c => c.id !== cat.id);
+          populateCatIconEditor();
+        };
+        cell.appendChild(del);
       }
 
       function confirmEdit() {
@@ -1100,26 +1072,15 @@
     const emojiCell = document.createElement('div');
     emojiCell.className = 'cat-option cat-icon-edit-cell editing';
     emojiCell.style.cssText = 'flex-shrink:0;width:56px;min-width:56px;position:relative';
-    const emojiDisplay = document.createElement('span');
-    emojiDisplay.className = 'cat-icon-display';
-    emojiDisplay.style.display = 'none';
     const emojiInp = document.createElement('input');
     emojiInp.className = 'cat-icon-inp';
     emojiInp.style.display = 'block';
     emojiInp.placeholder = '☺';
     emojiInp.autocomplete = 'off';
     emojiInp.spellcheck = false;
-    emojiCell.appendChild(emojiDisplay);
     emojiCell.appendChild(emojiInp);
     row.appendChild(emojiCell);
 
-    function lastGrapheme(str) {
-      if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-        const segs = [...new Intl.Segmenter().segment(str)];
-        return segs.length ? segs[segs.length - 1].segment : str;
-      }
-      return str.slice(-2);
-    }
     emojiInp.addEventListener('input', () => { if (emojiInp.value.trim()) emojiInp.value = lastGrapheme(emojiInp.value); });
 
     // Name input
@@ -1147,7 +1108,7 @@
     emojiInp.focus();
 
     function confirmAddCategory() {
-      const emoji = emojiInp.value.trim() || emojiDisplay.textContent.trim();
+      const emoji = emojiInp.value.trim();
       const name  = nameInp.value.trim();
       if (!emoji || emoji === '☺') { showToast('Odaberi emoji za kategoriju'); emojiInp.focus(); return; }
       if (!name) { showToast('Unesi naziv kategorije'); nameInp.focus(); return; }
@@ -1162,7 +1123,6 @@
     }
 
     function cancelAddCategory() {
-      const row = document.getElementById('catIconAddRow');
       row.style.display = 'none';
       row.innerHTML = '';
     }
@@ -1195,7 +1155,7 @@
     }
     pendingSortType = null;
 
-    // Read icon edits from cells into localCatIcons
+    // Read icon edits from cells into localCatIcons; prune deleted categories
     document.querySelectorAll('.cat-icon-edit-cell[data-cat-id]').forEach(cell => {
       const id  = cell.dataset.catId;
       const val = cell.querySelector('.cat-icon-display').textContent.trim();
@@ -1203,10 +1163,13 @@
       if (cat && val && val !== cat._baseIcon) localCatIcons[id] = val;
       else delete localCatIcons[id];
     });
+    const activeIds = new Set(pendingCategories.map(c => c.id));
+    Object.keys(localCatIcons).forEach(id => { if (!activeIds.has(id)) delete localCatIcons[id]; });
     localStorage.setItem('cat_icons', JSON.stringify(localCatIcons));
 
     const categoriesChanged = pendingCategories.map(c => c.id).join(',') !== originalCategoryIds;
     categories = pendingCategories;
+    ensureFallbackCategory(categories);
     localCatOrder = categories.map(c => c.id);
     localStorage.setItem('cat_order', JSON.stringify(localCatOrder));
     pendingCategories = null;
@@ -1274,7 +1237,7 @@
       opt.className = 'cat-option' + (item && item.category === cat.id ? ' selected' : '');
       opt.innerHTML = `<span>${cat.icon}</span><span>${cat.label}</span>`;
       opt.onclick = () => {
-        const it = items.find(i => i.id === catPickerItemId);
+        const it = items.find(i => i.id === id);
         if (it) { it.category = cat.id; markDirty(); render(); }
         closeCatPicker();
       };
