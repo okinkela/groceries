@@ -528,6 +528,10 @@
   }
 
   function loadLocal() {
+    if (localStorage.getItem('cache_v') !== '2') {
+      ['items_cache','items_sha','categories_cache','shared_cat_icons'].forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('cache_v', '2');
+    }
     const cached = localStorage.getItem('items_cache');
     const sha    = localStorage.getItem('items_sha');
     if (cached) { items = JSON.parse(cached); fileSha = sha || ''; }
@@ -567,7 +571,7 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       fileSha = data.sha;
-      const raw = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      const raw = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))));
       if (Array.isArray(raw)) {
         items = raw;
       } else {
