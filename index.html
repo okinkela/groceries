@@ -159,7 +159,7 @@
     .item.checked .item-name { color: var(--ink); }
     .item:not(.checked) .check-btn { background: white; border-color: var(--border); }
     .item:not(.checked) .item-name { color: var(--ink-light); }
-    .item-name { flex: 1; font-size: 1.3rem; font-weight: 400; transition: color 0.2s; }
+    .item-name { flex: 1; font-size: var(--item-font-size, 1.3rem); font-weight: 400; transition: color 0.2s; }
     .item-name[contenteditable="true"] { outline: none; border-bottom: 1.5px solid var(--accent); cursor: text; color: var(--ink); }
 
     .empty { text-align: center; padding: 60px 24px; color: var(--ink-light); }
@@ -542,6 +542,10 @@
         <span id="notifyAppLabel">WhatsApp</span><span>↕</span>
       </button>
     </div>
+    <p class="config-label">Veličina teksta</p>
+    <button class="sort-cycle-btn" id="fontSizeCycleBtn" onclick="cycleFontSize()">
+      <span id="fontSizeCycleLabel"></span><span>↕</span>
+    </button>
     <p class="config-label">Sortiranje</p>
     <button class="sort-cycle-btn" id="sortCycleBtn" onclick="cycleSortType()">
       <span id="sortCycleLabel"></span><span>↕</span>
@@ -573,7 +577,24 @@
   let pushing = false;
   let filter  = '';
   let filterCategory = null; // null = all
-  let sortType = localStorage.getItem('sort_type') || 'category';
+  let sortType  = localStorage.getItem('sort_type')   || 'category';
+  let fontSize  = localStorage.getItem('font_size')   || 'normal';
+
+  const fontSizes = {
+    normal: { label: 'Normalni',    value: '1.3rem'  },
+    large:  { label: 'Veliki',      value: '1.6rem'  },
+    xlarge: { label: 'Vrlo veliki', value: '1.9rem'  }
+  };
+  const fontSizeOrder = ['normal', 'large', 'xlarge'];
+
+  // Migrate old keys (small → normal, medium → normal)
+  if (!fontSizes[fontSize]) { fontSize = 'normal'; localStorage.setItem('font_size', fontSize); }
+
+  function applyFontSize(size) {
+    const sz = fontSizes[size] || fontSizes['normal'];
+    document.documentElement.style.setProperty('--item-font-size', sz.value);
+  }
+  applyFontSize(fontSize);
 
   function lastGrapheme(str) {
     if (typeof Intl !== 'undefined' && Intl.Segmenter) {
@@ -1071,6 +1092,18 @@
     category: 'Kategorija → Za kupiti → Abeceda',
     tobuy:    'Za kupiti → Kategorija → Abeceda'
   };
+  let pendingFontSize = null;
+  function setFontSize(size) {
+    pendingFontSize = size;
+    document.getElementById('fontSizeCycleLabel').textContent = fontSizes[size].label;
+    applyFontSize(size);
+  }
+  function cycleFontSize() {
+    const current = pendingFontSize || fontSize;
+    const next = fontSizeOrder[(fontSizeOrder.indexOf(current) + 1) % fontSizeOrder.length];
+    setFontSize(next);
+  }
+
   function setSortType(type) {
     pendingSortType = type;
     document.getElementById('sortCycleLabel').textContent = sortLabels[type];
@@ -1353,6 +1386,7 @@
     document.getElementById('cfgNotifyPhone').value = cfg.notifyPhone;
     setNotifyApp(cfg.notifyApp || 'whatsapp');
     pendingSortType = sortType;
+    setFontSize(fontSize);
     originalCategoryIds = categories.map(c => c.id).join(',');
     pendingCategories = categories.map(c => ({ ...c }));
     setSortType(sortType);
@@ -1362,8 +1396,10 @@
   function closeConfig() {
     pendingSortType = null;
     pendingNotifyApp = null;
+    pendingFontSize = null;
     pendingCategories = null;
     originalCategoryIds = null;
+    applyFontSize(fontSize); // revert live preview if cancelled
     document.getElementById('catIconAddRow').style.display = 'none';
     document.getElementById('catIconAddRow').innerHTML = '';
     document.getElementById('configOverlay').classList.remove('open');
@@ -1379,7 +1415,12 @@
       sortType = pendingSortType;
       localStorage.setItem('sort_type', sortType);
     }
+    if (pendingFontSize !== null && pendingFontSize !== fontSize) {
+      fontSize = pendingFontSize;
+      localStorage.setItem('font_size', fontSize);
+    }
     pendingSortType = null;
+    pendingFontSize = null;
     pendingNotifyApp = null;
 
     // Read icon edits from cells into localCatIcons; prune deleted categories
