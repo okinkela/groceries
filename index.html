@@ -278,6 +278,16 @@
       font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
     }
 
+    /* Changes notification sheet */
+    .changes-list { margin: 4px 0 20px; }
+    .changes-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+      font-size: 0.95rem; color: var(--ink);
+    }
+    .changes-item:last-child { border-bottom: none; }
+    .changes-item-icon { font-size: 1.3rem; flex-shrink: 0; }
+
     /* Quantity badge on item row */
     .qty-badge {
       font-size: 0.75rem; color: var(--ink-light); font-weight: 500;
@@ -458,6 +468,29 @@
   </div>
 </div>
 
+<!-- Clear confirmation -->
+<div class="config-overlay" id="clearConfirmOverlay" onclick="closeClearConfirm()">
+  <div class="config-sheet" onclick="event.stopPropagation()">
+    <h2>Očisti listu</h2>
+    <p class="config-hint" id="clearConfirmMsg" style="font-size:0.95rem; color:var(--ink); margin-bottom:20px"></p>
+    <div class="config-actions">
+      <button class="config-cancel" onclick="closeClearConfirm()">Odustani</button>
+      <button class="config-save" onclick="confirmClearToBuy()">Očisti</button>
+    </div>
+  </div>
+</div>
+
+<!-- Changes notification -->
+<div class="config-overlay" id="changesOverlay" onclick="closeChanges()">
+  <div class="config-sheet" onclick="event.stopPropagation()">
+    <h2>Dodano na listu</h2>
+    <div class="changes-list" id="changesBody"></div>
+    <div class="config-actions">
+      <button class="config-save" style="flex:1" onclick="closeChanges()">U redu</button>
+    </div>
+  </div>
+</div>
+
 <!-- Category picker -->
 <div class="cat-overlay" id="catOverlay">
   <div class="cat-sheet">
@@ -596,6 +629,9 @@
     if (dirty) return; // don't overwrite unsaved local changes
     setSync('syncing', 'Sinkronizacija…');
     try {
+      const hadItems = items.length > 0;
+      const localCheckedIds = new Set(items.filter(i => i.checked).map(i => i.id));
+
       const res = await fetch(apiUrl(), {
         headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github.v3+json' }
       });
@@ -612,6 +648,11 @@
       render();
       updateFilterBtn();
       setSync('ok', 'Sinkronizirano');
+
+      if (hadItems) {
+        const added = items.filter(i => i.checked && !localCheckedIds.has(i.id));
+        if (added.length > 0) showChanges(added);
+      }
     } catch {
       setSync('error', 'Greška — pokušavam ponovo');
     }
@@ -885,8 +926,21 @@
   }
 
   function clearToBuy() {
+    const count = items.filter(i => i.checked).length;
+    if (count === 0) return;
+    const noun = count === 1 ? 'artikl' : count < 5 ? 'artikla' : 'artikala';
+    const verb = count === 1 ? 'izbrisan' : count < 5 ? 'izbrisana' : 'izbrisano';
+    document.getElementById('clearConfirmMsg').textContent =
+      `${count} ${noun} će biti ${verb} iz liste 'Za kupiti'.`;
+    document.getElementById('clearConfirmOverlay').classList.add('open');
+  }
+  function closeClearConfirm() {
+    document.getElementById('clearConfirmOverlay').classList.remove('open');
+  }
+  function confirmClearToBuy() {
     items.forEach(i => { if (i.checked) i.checked = false; });
     markDirty(); render();
+    closeClearConfirm();
   }
 
   function escHtml(s) {
@@ -1435,6 +1489,25 @@
     }
   }
 
+  // ── Changes notification ──────────────────────────────────
+  function showChanges(added) {
+    const body = document.getElementById('changesBody');
+    body.innerHTML = added.map(i => {
+      const cat = catById(i.category);
+      const qtyStr = (i.qty != null && i.qty !== '')
+        ? (typeof i.qty === 'number' ? ` × ${i.qty}` : ` ${escHtml(String(i.qty))}`)
+        : '';
+      return `<div class="changes-item">
+        <span class="changes-item-icon">${cat.icon}</span>
+        <span>${escHtml(i.name)}${qtyStr}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('changesOverlay').classList.add('open');
+  }
+  function closeChanges() {
+    document.getElementById('changesOverlay').classList.remove('open');
+  }
+
   // ── Share ─────────────────────────────────────────────────
   function shareList() {
     const toBuy = items.filter(i => i.checked);
@@ -1461,6 +1534,10 @@
   if (items.length > 0) render();
   if (cfg.user && cfg.token) fetchList();
   else openConfig();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') fetchList();
+  });
 </script>
 </body>
 </html>
