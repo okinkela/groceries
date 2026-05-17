@@ -578,17 +578,21 @@
   let filter  = '';
   let filterCategory = null; // null = all
   let sortType  = localStorage.getItem('sort_type')   || 'category';
-  let fontSize  = localStorage.getItem('font_size')   || 'medium';
+  let fontSize  = localStorage.getItem('font_size')   || 'normal';
 
   const fontSizes = {
-    small:  { label: 'Mali',    value: '1.05rem' },
-    medium: { label: 'Srednji', value: '1.3rem'  },
-    large:  { label: 'Veliki',  value: '1.6rem'  }
+    normal: { label: 'Normalni',    value: '1.3rem'  },
+    large:  { label: 'Veliki',      value: '1.6rem'  },
+    xlarge: { label: 'Vrlo veliki', value: '1.9rem'  }
   };
-  const fontSizeOrder = ['small', 'medium', 'large'];
+  const fontSizeOrder = ['normal', 'large', 'xlarge'];
+
+  // Migrate old keys (small → normal, medium → normal)
+  if (!fontSizes[fontSize]) { fontSize = 'normal'; localStorage.setItem('font_size', fontSize); }
 
   function applyFontSize(size) {
-    document.documentElement.style.setProperty('--item-font-size', fontSizes[size].value);
+    const sz = fontSizes[size] || fontSizes['normal'];
+    document.documentElement.style.setProperty('--item-font-size', sz.value);
   }
   applyFontSize(fontSize);
 
