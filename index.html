@@ -62,16 +62,16 @@
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
     .gear-btn {
-      position: absolute; top: 52px; right: 24px;
-      background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 4px;
+      position: absolute; top: 46px; right: 16px;
+      background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 10px;
     }
     .share-btn {
-      position: absolute; top: 52px; right: 56px;
-      background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 4px;
+      position: absolute; top: 46px; right: 56px;
+      background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 10px;
     }
     .clear-header-btn {
-      position: absolute; top: 52px; right: 92px;
-      background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 4px;
+      position: absolute; top: 46px; right: 96px;
+      background: none; border: none; color: var(--ink-light); cursor: pointer; padding: 10px;
     }
 
     .add-bar {
@@ -413,36 +413,18 @@
     .cat-icon-add-confirm { background: var(--accent); color: white; }
     .cat-icon-add-cancel  { background: var(--border); color: var(--ink-light); }
 
-    .sort-options {
-      display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;
+    .sort-cycle-btn {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1.5px solid var(--border); background: var(--bg);
+      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink);
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; margin-bottom: 16px; transition: border-color 0.15s; text-align: left;
     }
-    .sort-option {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border);
-      background: var(--bg); cursor: pointer; transition: all 0.15s;
-      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink-light);
-      text-align: left;
-    }
-    .sort-option::before {
-      content: ''; flex-shrink: 0;
-      width: 16px; height: 16px; border-radius: 50%;
-      border: 2px solid var(--border); background: white; transition: all 0.15s;
-    }
-    .sort-option.selected { border-color: var(--accent); color: var(--ink); }
-    .sort-option.selected::before { border-color: var(--accent); background: var(--accent); }
+    .sort-cycle-btn:active { border-color: var(--accent); }
+    .notify-row { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+    .notify-row input { flex: 1; margin-bottom: 0; }
+    .notify-app-btn { width: auto; flex-shrink: 0; margin-bottom: 0; white-space: nowrap; }
 
-    .notify-row {
-      display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
-    }
-    .notify-row input {
-      flex: 1; margin-bottom: 0;
-    }
-    .notify-app-toggle {
-      flex-shrink: 0; padding: 10px 12px; border-radius: 10px;
-      border: 1.5px solid var(--accent); background: var(--bg);
-      color: var(--accent); font-family: 'DM Sans', sans-serif;
-      font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
-    }
   </style>
 </head>
 <body>
@@ -556,13 +538,14 @@
     <p class="config-label">Obavijesti</p>
     <div class="notify-row">
       <input type="tel" id="cfgNotifyPhone" placeholder="+385912345678" autocomplete="off" />
-      <button class="notify-app-toggle" id="notifyAppToggle" onclick="toggleNotifyApp()">WhatsApp</button>
+      <button class="sort-cycle-btn notify-app-btn" id="notifyAppToggle" onclick="toggleNotifyApp()">
+        <span id="notifyAppLabel">WhatsApp</span><span>↕</span>
+      </button>
     </div>
     <p class="config-label">Sortiranje</p>
-    <div class="sort-options">
-      <button class="sort-option" id="sortOptCategory" onclick="setSortType('category')">Kategorija → Za kupiti → Abeceda</button>
-      <button class="sort-option" id="sortOptTobuy" onclick="setSortType('tobuy')">Za kupiti → Kategorija → Abeceda</button>
-    </div>
+    <button class="sort-cycle-btn" id="sortCycleBtn" onclick="cycleSortType()">
+      <span id="sortCycleLabel"></span><span>↕</span>
+    </button>
     <p class="config-label">Ikone kategorija</p>
     <p class="config-hint">Tapni ikonu za promjenu emojija<br>Drži i povuci za promjenu redoslijeda</p>
     <div id="catIconEditor" class="cat-icon-editor"></div>
@@ -1078,15 +1061,21 @@
   let catDragInitialized   = false;
   let justDragged          = false;
 
+  const sortLabels = {
+    category: 'Kategorija → Za kupiti → Abeceda',
+    tobuy:    'Za kupiti → Kategorija → Abeceda'
+  };
   function setSortType(type) {
     pendingSortType = type;
-    document.getElementById('sortOptTobuy').classList.toggle('selected', type === 'tobuy');
-    document.getElementById('sortOptCategory').classList.toggle('selected', type === 'category');
+    document.getElementById('sortCycleLabel').textContent = sortLabels[type];
+  }
+  function cycleSortType() {
+    setSortType((pendingSortType || sortType) === 'category' ? 'tobuy' : 'category');
   }
 
   function setNotifyApp(app) {
     pendingNotifyApp = app;
-    document.getElementById('notifyAppToggle').textContent = app === 'sms' ? 'SMS' : 'WhatsApp';
+    document.getElementById('notifyAppLabel').textContent = app === 'sms' ? 'SMS' : 'WhatsApp';
   }
   function toggleNotifyApp() {
     setNotifyApp((pendingNotifyApp || cfg.notifyApp || 'whatsapp') === 'whatsapp' ? 'sms' : 'whatsapp');
@@ -1360,8 +1349,7 @@
     pendingSortType = sortType;
     originalCategoryIds = categories.map(c => c.id).join(',');
     pendingCategories = categories.map(c => ({ ...c }));
-    document.getElementById('sortOptTobuy').classList.toggle('selected', sortType === 'tobuy');
-    document.getElementById('sortOptCategory').classList.toggle('selected', sortType === 'category');
+    setSortType(sortType);
     populateCatIconEditor();
     document.getElementById('configOverlay').classList.add('open');
   }
