@@ -95,13 +95,20 @@
     }
     .add-bar button:active { opacity: 0.8; transform: scale(0.95); }
 
-    .filter-btn {
+    .add-bar-actions {
+      display: flex; align-items: center; gap: 0; flex-shrink: 0;
+    }
+    .add-bar .filter-btn {
       background: transparent; border: none; border-radius: 10px;
-      width: 48px; height: 48px; cursor: pointer; flex-shrink: 0;
+      width: 30px; height: 48px; cursor: pointer; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       font-size: 1.2rem; transition: opacity 0.2s;
     }
-    .filter-btn.active { opacity: 1; }
+    .add-bar .filter-btn.active { opacity: 1; }
+    .filter-btn-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1px; font-size: 0.65rem; line-height: 1.3;
+    }
 
     .list-wrap { padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
 
@@ -242,18 +249,30 @@
       font-family: 'DM Serif Display', serif; font-size: 1.2rem;
       margin-bottom: 16px; color: var(--ink);
     }
+    .cat-filter-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .cat-filter-header h3 { margin-bottom: 0; }
+    .cat-filter-all-btn {
+      padding: 6px 16px; border-radius: 20px;
+      border: 1.5px solid var(--border); background: var(--bg);
+      color: var(--ink-light); font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; cursor: pointer; transition: all 0.15s;
+    }
+    .cat-filter-all-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
     .cat-grid {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
       margin-bottom: 16px;
     }
     .cat-option {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      padding: 10px 6px; border-radius: 12px; border: 1.5px solid var(--border);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 7px 6px; border-radius: 12px; border: 1.5px solid var(--border);
       background: var(--bg); cursor: pointer; transition: all 0.15s;
     }
     .cat-option.selected { border-color: var(--accent); background: #d8f3dc; }
-    .cat-option span:first-child { font-size: 1.8rem; }
-    .cat-option span:last-child { font-size: 0.8rem; color: var(--ink-light); text-align: center; }
+    .cat-option span:first-child { font-size: 1.5rem; }
+    .cat-option span:last-child, .cat-option-label { font-size: 0.8rem; color: var(--ink-light); text-align: center; }
     .cat-close {
       width: 100%; background: none; border: none; color: var(--ink-light);
       font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; padding: 8px;
@@ -261,9 +280,9 @@
 
     /* Quantity badge on item row */
     .qty-badge {
-      font-size: 0.8rem; color: var(--accent); font-weight: 600;
-      background: var(--bg); border: 1.5px solid var(--accent);
-      border-radius: 6px; padding: 2px 8px; flex-shrink: 0;
+      font-size: 0.75rem; color: var(--ink-light); font-weight: 500;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 1px 6px; flex-shrink: 0;
     }
 
     /* Inline quantity editor */
@@ -313,9 +332,9 @@
     .qty-dismiss-btn { background: var(--bg); color: var(--ink-light); border: 1.5px solid var(--border); }
 
     .cat-icon-editor { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
-    .cat-icon-edit-cell { cursor: grab; }
+    .cat-icon-edit-cell { cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     .cat-icon-edit-cell.editing { cursor: default; }
-    .cat-icon-edit-cell .cat-icon-display { font-size: 1.8rem; }
+    .cat-icon-edit-cell .cat-icon-display { font-size: 1.5rem; }
     .cat-icon-edit-cell.editing .cat-icon-display { display: none; }
     .cat-icon-inp {
       display: none; width: 2.4rem; height: 2.4rem; text-align: center; font-size: 1.4rem;
@@ -332,7 +351,7 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 4px; padding: 10px 6px; border-radius: 12px;
       border: 1.5px dashed var(--border); background: var(--bg);
-      cursor: pointer; color: var(--ink-light); font-size: 1.6rem; transition: all 0.15s;
+      cursor: pointer; color: var(--ink-light); font-size: 1.5rem; transition: all 0.15s;
     }
     .cat-icon-add-tile:active { border-color: var(--accent); color: var(--accent); }
     .cat-icon-add-row {
@@ -401,14 +420,16 @@
 
 <div class="add-bar">
   <input type="text" id="newItem" placeholder="Dodaj / pretraži artikl…" autocomplete="off" autocorrect="off" />
-  <button class="filter-btn" id="filterBtn" onclick="openCatFilter()" aria-label="Filtriraj po kategoriji">
-    <span style="font-size:1.2rem">🛒</span>
-  </button>
-  <button onclick="addItem()" aria-label="Dodaj artikl">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  </button>
+  <div class="add-bar-actions">
+    <button class="filter-btn" id="filterBtn" onclick="openCatFilter()" aria-label="Filtriraj po kategoriji">
+      <span style="font-size:1.2rem">🛒</span>
+    </button>
+    <button onclick="addItem()" aria-label="Dodaj artikl">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
+  </div>
 </div>
 <div class="list-wrap" id="listWrap"></div>
 <div class="toast" id="toast"></div>
@@ -416,7 +437,10 @@
 <!-- Category filter picker -->
 <div class="cat-overlay" id="catFilterOverlay">
   <div class="cat-sheet">
-    <h3>Filtriraj po kategoriji</h3>
+    <div class="cat-filter-header">
+      <h3>Filtriraj po kategoriji</h3>
+      <button id="catFilterAllBtn" class="cat-filter-all-btn">Sve</button>
+    </div>
     <div class="cat-grid" id="catFilterGrid"></div>
   </div>
 </div>
@@ -566,6 +590,7 @@
       applyCatIcons();
       saveLocal();
       render();
+      updateFilterBtn();
       setSync('ok', 'Sinkronizirano');
     } catch {
       setSync('error', 'Greška — pokušavam ponovo');
@@ -703,9 +728,10 @@
     el.className = 'item' + (item.checked ? ' checked' : '');
     const displayName = highlight ? highlightMatch(item.name, highlight) : escHtml(item.name);
     const cat = catById(item.category);
-    const qtyHtml = (item.checked && item.qty != null && item.qty !== '')
-      ? `<span class="qty-badge">${typeof item.qty === 'number' ? '× ' + item.qty : escHtml(String(item.qty))}</span>`
-      : '';
+    const qtyDisplay = (item.qty != null && item.qty !== '')
+      ? (typeof item.qty === 'number' ? '× ' + item.qty : escHtml(String(item.qty)))
+      : '× 1';
+    const qtyHtml = item.checked ? `<span class="qty-badge">${qtyDisplay}</span>` : '';
     el.innerHTML = `
       <button class="check-btn" onclick="toggle('${item.id}')"></button>
       <span class="item-name">${displayName}</span>
@@ -1019,6 +1045,7 @@
       inp.placeholder = '☺';
 
       const lbl = document.createElement('span');
+      lbl.className = 'cat-option-label';
       lbl.textContent = cat.label;
 
       cell.appendChild(display);
@@ -1196,12 +1223,9 @@
   function openCatFilter() {
     const grid = document.getElementById('catFilterGrid');
     grid.innerHTML = '';
-    // Add "All" option
-    const all = document.createElement('button');
-    all.className = 'cat-option' + (!filterCategory ? ' selected' : '');
-    all.innerHTML = `<span>🛒</span><span>Sve</span>`;
-    all.onclick = () => { filterCategory = null; updateFilterBtn(); closeCatFilter(); render(); };
-    grid.appendChild(all);
+    const allBtn = document.getElementById('catFilterAllBtn');
+    allBtn.className = 'cat-filter-all-btn' + (!filterCategory ? ' selected' : '');
+    allBtn.onclick = () => { filterCategory = null; updateFilterBtn(); closeCatFilter(); render(); };
     categories.forEach(cat => {
       const opt = document.createElement('button');
       opt.className = 'cat-option' + (filterCategory === cat.id ? ' selected' : '');
@@ -1224,7 +1248,9 @@
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
-      btn.innerHTML = `<span style="font-size:1.2rem">🛒</span>`;
+      const icons = categories.slice(0, 4).map(c => c.icon);
+      while (icons.length < 4) icons.push('·');
+      btn.innerHTML = `<div class="filter-btn-grid">${icons.map(e => `<span>${e}</span>`).join('')}</div>`;
     }
   }
 
@@ -1390,6 +1416,7 @@
 
   // ── Init ──────────────────────────────────────────────────
   loadLocal();
+  updateFilterBtn();
   if (items.length > 0) render();
   if (cfg.user && cfg.token) fetchList();
   else openConfig();
