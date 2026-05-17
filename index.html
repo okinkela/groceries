@@ -162,6 +162,7 @@
     .item:not(.checked) .check-btn { background: white; border-color: var(--border); }
     .item:not(.checked) .item-name { color: var(--ink-light); }
     .item-name { flex: 1; font-size: 1.3rem; font-weight: 400; transition: color 0.2s; }
+    .item-name[contenteditable="true"] { outline: none; border-bottom: 1.5px solid var(--accent); cursor: text; color: var(--ink); }
 
     .empty { text-align: center; padding: 60px 24px; color: var(--ink-light); }
     .empty p:first-child {
@@ -753,10 +754,11 @@
   function render(scrollToId) {
     closeQtyPicker();
     const wrap = document.getElementById('listWrap');
-    const q = filter.toLowerCase().trim();
+    const q = filter.trim();
+    const qNorm = normalizeStr(q);
     let visible = items;
     if (filterCategory) visible = visible.filter(i => i.category === filterCategory);
-    if (q) visible = visible.filter(i => i.name.toLowerCase().includes(q));
+    if (q) visible = visible.filter(i => normalizeStr(i.name).includes(qNorm));
 
     wrap.innerHTML = '';
 
@@ -831,10 +833,12 @@
     el.className = 'item' + (item.checked ? ' checked' : '');
     const displayName = highlight ? highlightMatch(item.name, highlight) : escHtml(item.name);
     const cat = catById(item.category);
-    const qtyDisplay = (item.qty != null && item.qty !== '')
+    const hasQty = item.qty != null && item.qty !== '';
+    const qtyDisplay = hasQty
       ? (typeof item.qty === 'number' ? '× ' + item.qty : escHtml(String(item.qty)))
       : '× 1';
-    const qtyHtml = item.checked ? `<span class="qty-badge" onclick="openQtyPicker('${item.id}')" style="cursor:pointer">${qtyDisplay}</span>` : '';
+    const showQty = item.checked || hasQty;
+    const qtyHtml = showQty ? `<span class="qty-badge" onclick="openQtyPicker('${item.id}')" style="cursor:pointer">${qtyDisplay}</span>` : '';
     const svgCamOutline = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
     const svgCamFilled = `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.5" fill="white"/></svg>`;
     const photoBtn = item.photo
@@ -856,6 +860,32 @@
     el.addEventListener('touchmove',  () => { clearTimeout(lpTimer); lpTimer = null; }, { passive: true });
     el.addEventListener('touchend',   () => { clearTimeout(lpTimer); lpTimer = null; }, { passive: true });
     el.addEventListener('contextmenu', e => { e.preventDefault(); openQtyPicker(item.id); });
+
+    // Long press on item name → edit name in-place
+    const nameSpan = el.querySelector('.item-name');
+    if (nameSpan) {
+      let nameLpTimer = null;
+      nameSpan.addEventListener('touchstart', e => {
+        e.stopPropagation();
+        nameLpTimer = setTimeout(() => { nameLpTimer = null; editItemName(item.id); }, 500);
+      }, { passive: true });
+      nameSpan.addEventListener('touchmove',  () => { clearTimeout(nameLpTimer); nameLpTimer = null; }, { passive: true });
+      nameSpan.addEventListener('touchend',   () => { clearTimeout(nameLpTimer); nameLpTimer = null; }, { passive: true });
+      nameSpan.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); editItemName(item.id); });
+    }
+
+    // Long press on qty badge opens directly in text mode
+    const badge = el.querySelector('.qty-badge');
+    if (badge) {
+      let badgeLpTimer = null;
+      badge.addEventListener('touchstart', e => {
+        e.stopPropagation();
+        badgeLpTimer = setTimeout(() => { badgeLpTimer = null; openQtyPicker(item.id, 'text'); }, 500);
+      }, { passive: true });
+      badge.addEventListener('touchmove',  () => { clearTimeout(badgeLpTimer); badgeLpTimer = null; }, { passive: true });
+      badge.addEventListener('touchend',   () => { clearTimeout(badgeLpTimer); badgeLpTimer = null; }, { passive: true });
+      badge.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); openQtyPicker(item.id, 'text'); });
+    }
 
     wrap.appendChild(el);
     attachSwipe(el, item);
@@ -995,10 +1025,19 @@
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  const _combiningRe = new RegExp('[\\u0300-\\u036f]', 'g');
+  function normalizeStr(s) {
+    return s.normalize('NFD').replace(_combiningRe, '').toLowerCase();
+  }
+
   function highlightMatch(name, q) {
-    const safe = escHtml(name);
-    const safeQ = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return safe.replace(new RegExp(`(${safeQ})`, 'gi'), '<mark>$1</mark>');
+    const normName = normalizeStr(name);
+    const normQ    = normalizeStr(q);
+    const idx = normName.indexOf(normQ);
+    if (idx === -1) return escHtml(name);
+    return escHtml(name.slice(0, idx))
+      + '<mark>' + escHtml(name.slice(idx, idx + normQ.length)) + '</mark>'
+      + escHtml(name.slice(idx + normQ.length));
   }
 
   // ── Enter key + live filter ───────────────────────────────
@@ -1426,7 +1465,7 @@
   let qtyMode = 'stepper';
   let qtyCurrent = 1;
 
-  function openQtyPicker(id) {
+  function openQtyPicker(id, forceMode = null) {
     closeQtyPicker();
     qtyPickerItemId = id;
     const item = items.find(i => i.id === id);
@@ -1435,7 +1474,7 @@
     const qty = item.qty;
     const isNum = typeof qty === 'number' && qty >= 0;
     qtyCurrent = isNum ? qty : 1;
-    qtyMode = (qty != null && qty !== '' && typeof qty !== 'number') ? 'text' : 'stepper';
+    qtyMode = forceMode || ((qty != null && qty !== '' && typeof qty !== 'number') ? 'text' : 'stepper');
 
     const inline = document.createElement('div');
     inline.className = 'qty-inline';
@@ -1446,7 +1485,8 @@
     stepperRow.innerHTML = `
       <button class="qty-step-btn" onclick="qtyAdjust(-1)">−</button>
       <button class="qty-num-btn" id="qtyNumBtn" onclick="qtySwitchToText()">${qtyCurrent}</button>
-      <button class="qty-step-btn" onclick="qtyAdjust(1)">+</button>`;
+      <button class="qty-step-btn" onclick="qtyAdjust(1)">+</button>
+      <button class="qty-back-btn" onclick="qtySwitchToText()">← 400ml</button>`;
 
     const textRow = document.createElement('div');
     textRow.className = 'qty-text-row' + (qtyMode === 'text' ? ' visible' : '');
@@ -1535,6 +1575,33 @@
       document.getElementById('qty-inline-' + qtyPickerItemId)?.remove();
       qtyPickerItemId = null;
     }
+  }
+
+  // ── Inline item name edit ─────────────────────────────────
+  function editItemName(id) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const span = document.querySelector('#wrap-' + id + ' .item-name');
+    if (!span || span.contentEditable === 'true') return;
+    span.textContent = item.name;
+    span.contentEditable = 'true';
+    span.focus();
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    function save() {
+      const newName = span.textContent.trim();
+      span.contentEditable = 'false';
+      if (newName && newName !== item.name) { item.name = newName; markDirty(); render(); }
+      else span.textContent = item.name;
+    }
+    span.addEventListener('blur', save, { once: true });
+    span.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); span.blur(); }
+      if (e.key === 'Escape') { span.textContent = item.name; span.blur(); }
+    });
   }
 
   // ── Changes notification ──────────────────────────────────
