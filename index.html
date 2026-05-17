@@ -288,6 +288,40 @@
     .changes-item:last-child { border-bottom: none; }
     .changes-item-icon { font-size: 1.3rem; flex-shrink: 0; }
 
+    /* Photo on item row */
+    .item-photo-btn {
+      background: none; border: none; cursor: pointer; flex-shrink: 0;
+      padding: 0; color: var(--ink);
+      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      opacity: 0.25;
+    }
+    .item-photo-btn--has { opacity: 1; color: var(--accent); }
+    .photo-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end;
+    }
+    .photo-overlay.open { display: flex; }
+    .photo-sheet {
+      background: var(--card); border-radius: 20px 20px 0 0;
+      padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
+      width: 100%; animation: slideUp 0.25s ease;
+    }
+    .photo-sheet-img {
+      width: 100%; max-height: 50vh; border-radius: 12px;
+      object-fit: contain; background: var(--bg); margin-bottom: 16px;
+    }
+    .photo-sheet-actions { display: flex; gap: 10px; }
+    .photo-remove-btn {
+      flex: 1; padding: 12px; border-radius: 12px; border: none; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+      background: #fff0f0; color: #ff3b30;
+    }
+    .photo-close-btn {
+      flex: 1; padding: 12px; border-radius: 12px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+      background: var(--bg); color: var(--ink-light); border: 1.5px solid var(--border);
+    }
+
     /* Quantity badge on item row */
     .qty-badge {
       font-size: 0.75rem; color: var(--ink-light); font-weight: 500;
@@ -465,6 +499,20 @@
       <button id="catFilterAllBtn" class="cat-filter-all-btn">Sve</button>
     </div>
     <div class="cat-grid" id="catFilterGrid"></div>
+  </div>
+</div>
+
+<!-- Hidden photo file input -->
+<input type="file" id="photoInput" accept="image/*" style="display:none">
+
+<!-- Photo preview overlay -->
+<div class="photo-overlay" id="photoOverlay" onclick="closePhoto()">
+  <div class="photo-sheet" onclick="event.stopPropagation()">
+    <img class="photo-sheet-img" id="photoOverlayImg" src="" alt="Slika">
+    <div class="photo-sheet-actions">
+      <button class="photo-remove-btn" onclick="removePhoto()">Ukloni</button>
+      <button class="photo-close-btn"  onclick="closePhoto()">Zatvori</button>
+    </div>
   </div>
 </div>
 
@@ -792,11 +840,17 @@
     const qtyDisplay = (item.qty != null && item.qty !== '')
       ? (typeof item.qty === 'number' ? '× ' + item.qty : escHtml(String(item.qty)))
       : '× 1';
-    const qtyHtml = item.checked ? `<span class="qty-badge">${qtyDisplay}</span>` : '';
+    const qtyHtml = item.checked ? `<span class="qty-badge" onclick="openQtyPicker('${item.id}')" style="cursor:pointer">${qtyDisplay}</span>` : '';
+    const svgCamOutline = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+    const svgCamFilled = `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3.5" fill="white"/></svg>`;
+    const photoBtn = item.photo
+      ? `<button class="item-photo-btn item-photo-btn--has" onclick="openPhoto('${item.id}')" aria-label="Prikaži sliku">${svgCamFilled}</button>`
+      : `<button class="item-photo-btn" onclick="pickPhoto('${item.id}')" aria-label="Dodaj sliku">${svgCamOutline}</button>`;
     el.innerHTML = `
       <button class="check-btn" onclick="toggle('${item.id}')"></button>
       <span class="item-name">${displayName}</span>
       ${qtyHtml}
+      ${photoBtn}
       <span class="cat-icon" onclick="openCatPicker('${item.id}')" title="${cat.label}">${cat.icon}</span>
     `;
 
@@ -1506,6 +1560,63 @@
   }
   function closeChanges() {
     document.getElementById('changesOverlay').classList.remove('open');
+  }
+
+  // ── Photo ─────────────────────────────────────────────────
+  let photoItemId = null;
+
+  function pickPhoto(id) {
+    photoItemId = id;
+    document.getElementById('photoInput').value = '';
+    document.getElementById('photoInput').click();
+  }
+
+  document.getElementById('photoInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file || !photoItemId) return;
+    const base64 = await compressImage(file);
+    const item = items.find(i => i.id === photoItemId);
+    if (item) { item.photo = base64; markDirty(); render(); }
+  });
+
+  function compressImage(file) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 400;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+          else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function openPhoto(id) {
+    photoItemId = id;
+    const item = items.find(i => i.id === id);
+    if (!item?.photo) return;
+    document.getElementById('photoOverlayImg').src = item.photo;
+    document.getElementById('photoOverlay').classList.add('open');
+  }
+
+  function closePhoto() {
+    document.getElementById('photoOverlay').classList.remove('open');
+    document.getElementById('photoOverlayImg').src = '';
+  }
+
+  function removePhoto() {
+    const item = items.find(i => i.id === photoItemId);
+    if (item) { delete item.photo; markDirty(); render(); }
+    closePhoto();
   }
 
   // ── Share ─────────────────────────────────────────────────
