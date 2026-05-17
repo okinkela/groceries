@@ -387,6 +387,19 @@
     }
     .sort-option.selected { border-color: var(--accent); color: var(--ink); }
     .sort-option.selected::before { border-color: var(--accent); background: var(--accent); }
+
+    .notify-row {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
+    }
+    .notify-row input {
+      flex: 1; margin-bottom: 0;
+    }
+    .notify-app-toggle {
+      flex-shrink: 0; padding: 10px 12px; border-radius: 10px;
+      border: 1.5px solid var(--accent); background: var(--bg);
+      color: var(--accent); font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+    }
   </style>
 </head>
 <body>
@@ -460,6 +473,11 @@
     <h2>Postavke</h2>
     <label for="cfgToken">GitHub osobni token</label>
     <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
+    <p class="config-label">Obavijesti</p>
+    <div class="notify-row">
+      <input type="tel" id="cfgNotifyPhone" placeholder="+385912345678" autocomplete="off" />
+      <button class="notify-app-toggle" id="notifyAppToggle" onclick="toggleNotifyApp()">WhatsApp</button>
+    </div>
     <p class="config-label">Sortiranje</p>
     <div class="sort-options">
       <button class="sort-option" id="sortOptCategory" onclick="setSortType('category')">Kategorija → Za kupiti → Abeceda</button>
@@ -479,9 +497,11 @@
 <script>
   // ── Config ───────────────────────────────────────────────
   let cfg = {
-    user:  'okinkela',
-    repo:  'groceries',
-    token: localStorage.getItem('gh_token') || ''
+    user:        'okinkela',
+    repo:        'groceries',
+    token:       localStorage.getItem('gh_token') || '',
+    notifyPhone: localStorage.getItem('notify_phone') || '',
+    notifyApp:   localStorage.getItem('notify_app')   || ''
   };
 
   let items   = [];
@@ -893,6 +913,7 @@
 
   // ── Config ────────────────────────────────────────────────
   let pendingSortType      = null;
+  let pendingNotifyApp     = null;
   let pendingCategories    = null;
   let originalCategoryIds  = null;
   let catDragInitialized   = false;
@@ -902,6 +923,14 @@
     pendingSortType = type;
     document.getElementById('sortOptTobuy').classList.toggle('selected', type === 'tobuy');
     document.getElementById('sortOptCategory').classList.toggle('selected', type === 'category');
+  }
+
+  function setNotifyApp(app) {
+    pendingNotifyApp = app;
+    document.getElementById('notifyAppToggle').textContent = app === 'sms' ? 'SMS' : 'WhatsApp';
+  }
+  function toggleNotifyApp() {
+    setNotifyApp((pendingNotifyApp || cfg.notifyApp || 'whatsapp') === 'whatsapp' ? 'sms' : 'whatsapp');
   }
 
   function initCatDrag() {
@@ -1162,6 +1191,8 @@
 
   function openConfig() {
     document.getElementById('cfgToken').value = cfg.token;
+    document.getElementById('cfgNotifyPhone').value = cfg.notifyPhone;
+    setNotifyApp(cfg.notifyApp || 'whatsapp');
     pendingSortType = sortType;
     originalCategoryIds = categories.map(c => c.id).join(',');
     pendingCategories = categories.map(c => ({ ...c }));
@@ -1172,6 +1203,7 @@
   }
   function closeConfig() {
     pendingSortType = null;
+    pendingNotifyApp = null;
     pendingCategories = null;
     originalCategoryIds = null;
     document.getElementById('catIconAddRow').style.display = 'none';
@@ -1181,11 +1213,16 @@
   function saveConfig() {
     cfg.token = document.getElementById('cfgToken').value.trim();
     localStorage.setItem('gh_token', cfg.token);
+    cfg.notifyPhone = document.getElementById('cfgNotifyPhone').value.trim();
+    localStorage.setItem('notify_phone', cfg.notifyPhone);
+    cfg.notifyApp = pendingNotifyApp ?? cfg.notifyApp ?? 'whatsapp';
+    localStorage.setItem('notify_app', cfg.notifyApp);
     if (pendingSortType !== sortType) {
       sortType = pendingSortType;
       localStorage.setItem('sort_type', sortType);
     }
     pendingSortType = null;
+    pendingNotifyApp = null;
 
     // Read icon edits from cells into localCatIcons; prune deleted categories
     document.querySelectorAll('.cat-icon-edit-cell[data-cat-id]').forEach(cell => {
@@ -1402,16 +1439,20 @@
   function shareList() {
     const toBuy = items.filter(i => i.checked);
     if (toBuy.length === 0) { showToast('Nema artikala za kupnju'); return; }
+    if (!cfg.notifyPhone || !cfg.notifyApp) { openConfig(); return; }
+
     const text = '🛒 Namirnice za kupiti:\n' + toBuy.map(i => {
       if (i.qty == null || i.qty === '') return '• ' + i.name;
       const qtyStr = typeof i.qty === 'number' ? '× ' + i.qty : i.qty;
       return '• ' + i.name + ' (' + qtyStr + ')';
     }).join('\n');
-    if (navigator.share) {
-      navigator.share({ text: text }).catch(function() {});
-    } else {
-      window.prompt('Kopiraj i podijeli:', text);
-    }
+
+    const phone = cfg.notifyPhone.replace(/\D/g, '');
+    const enc   = encodeURIComponent(text);
+    let url;
+    if (cfg.notifyApp === 'sms') url = `sms:+${phone}&body=${enc}`;
+    else                         url = `https://wa.me/${phone}?text=${enc}`;
+    window.location.href = url;
   }
 
   // ── Init ──────────────────────────────────────────────────
