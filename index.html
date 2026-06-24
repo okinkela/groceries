@@ -1414,7 +1414,7 @@
     grid.innerHTML = '';
     const allBtn = document.getElementById('catFilterAllBtn');
     allBtn.className = 'cat-filter-all-btn' + (!filterCategory ? ' selected' : '');
-    allBtn.onclick = () => { filterCategory = null; updateFilterBtn(); closeCatFilter(); render(); };
+    allBtn.onclick = () => { filterCategory = null; filter = ''; document.getElementById('newItem').value = ''; updateFilterBtn(); closeCatFilter(); render(); };
     categories.forEach(cat => {
       const opt = document.createElement('button');
       opt.className = 'cat-option' + (filterCategory === cat.id ? ' selected' : '');
