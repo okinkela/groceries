@@ -160,7 +160,7 @@
     .item:not(.checked) .check-btn { background: white; border-color: var(--border); }
     .item:not(.checked) .item-name { color: var(--ink-light); }
     .item-name { flex: 1; font-size: 1.3rem; font-weight: 400; transition: color 0.2s; }
-    .item-name[contenteditable="true"] { outline: none; border-bottom: 1.5px solid var(--accent); cursor: text; color: var(--ink); }
+    .item-name[contenteditable="true"] { outline: none; border-bottom: 1.5px solid var(--accent); cursor: text; color: var(--ink); -webkit-touch-callout: none; }
 
     .empty { text-align: center; padding: 60px 24px; color: var(--ink-light); }
     .empty p:first-child {
@@ -1600,6 +1600,7 @@
     span.focus();
     const range = document.createRange();
     range.selectNodeContents(span);
+    range.collapse(false); // cursor at end, no selection
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
