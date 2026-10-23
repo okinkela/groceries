@@ -689,6 +689,14 @@
     }
   }
 
+  function buildContent() {
+    const json = JSON.stringify({
+      categories: categories.map(c => ({ id: c.id, icon: c._baseIcon, label: c.label })),
+      items
+    });
+    return btoa(String.fromCharCode(...new TextEncoder().encode(json)));
+  }
+
   async function pushList() {
     if (!cfg.user || !cfg.token || pushing) return;
     pushing = true;
@@ -701,35 +709,42 @@
           Accept: 'application/vnd.github.v3+json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          message: 'update groceries',
-          content: (() => {
-            const json = JSON.stringify({
-              categories: categories.map(c => ({ id: c.id, icon: c._baseIcon, label: c.label })),
-              items
-            });
-            const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(json)));
-            return encoded;
-          })(),
-          sha: fileSha
-        })
+        body: JSON.stringify({ message: 'update groceries', content: buildContent(), sha: fileSha })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         if (res.status === 422 && err.message?.includes('too large')) {
           setSync('error', 'Datoteka prevelika — ukloni slike');
-        } else {
-          throw new Error(res.status);
+          return;
         }
-        return;
+        if (res.status === 409) {
+          // SHA conflict: someone else pushed since our last fetch — refresh SHA and retry once
+          pushing = false;
+          setSync('syncing', 'Konflikt — sinkronizacija…');
+          const ref = await fetch(apiUrl(), {
+            headers: { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github.v3+json' }
+          });
+          if (ref.ok) {
+            const refData = await ref.json();
+            fileSha = refData.sha;
+            localStorage.setItem('items_sha', fileSha);
+          }
+          setTimeout(pushList, 500);
+          return;
+        }
+        if (res.status === 401 || res.status === 403) {
+          setSync('error', 'Token nije ispravan — provjeri postavke');
+          return;
+        }
+        throw new Error(res.status);
       }
       const data = await res.json();
       fileSha = data.content.sha;
       saveLocal();
       dirty = false;
       setSync('ok', 'Spremljeno');
-    } catch {
-      setSync('dirty', 'Nije spremljeno — pokušavam ponovo');
+    } catch (e) {
+      setSync('dirty', `Nije spremljeno (${e?.message || 'mreža'}) — pokušavam ponovo`);
     } finally {
       pushing = false;
     }
