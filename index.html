@@ -724,7 +724,10 @@
       categories: categories.map(c => ({ id: c.id, icon: c._baseIcon, label: c.label })),
       items
     });
-    return btoa(String.fromCharCode(...new TextEncoder().encode(json)));
+    const bytes = new TextEncoder().encode(json);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
   }
 
   async function pushList() {
