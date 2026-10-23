@@ -48,7 +48,21 @@
       display: flex; align-items: center; gap: 6px;
       margin-top: 6px; font-size: 0.75rem;
       color: var(--ink-light); font-weight: 300;
+      position: relative; cursor: default;
     }
+    .sync-bar.has-detail { cursor: pointer; }
+    .sync-detail-balloon {
+      display: none; position: absolute; bottom: calc(100% + 6px); left: 0;
+      background: var(--ink); color: var(--card); font-size: 0.72rem; font-weight: 400;
+      padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18); z-index: 100;
+      pointer-events: none;
+    }
+    .sync-detail-balloon::after {
+      content: ''; position: absolute; top: 100%; left: 12px;
+      border: 5px solid transparent; border-top-color: var(--ink);
+    }
+    .sync-bar.balloon-open .sync-detail-balloon { display: block; }
 
     .sync-dot {
       width: 7px; height: 7px; border-radius: 50%;
@@ -431,9 +445,10 @@
 
 <header>
   <h1 class="sr-only">Namirnice</h1>
-  <div class="sync-bar">
+  <div class="sync-bar" id="syncBar" onclick="toggleSyncBalloon()">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncLabel">Nije konfigurirano</span>
+    <div class="sync-detail-balloon" id="syncBalloon"></div>
   </div>
   <button class="gear-btn" onclick="openConfig()" aria-label="Settings">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -636,9 +651,24 @@
   }
 
   // ── Sync status ──────────────────────────────────────────
-  function setSync(state, msg) {
+  let syncDetail = '';
+  function setSync(state, msg, detail) {
     document.getElementById('syncDot').className = 'sync-dot ' + state;
     document.getElementById('syncLabel').textContent = msg;
+    const bar = document.getElementById('syncBar');
+    bar.classList.remove('balloon-open');
+    if (detail) {
+      syncDetail = detail;
+      document.getElementById('syncBalloon').textContent = detail;
+      bar.classList.add('has-detail');
+    } else {
+      syncDetail = '';
+      bar.classList.remove('has-detail');
+    }
+  }
+  function toggleSyncBalloon() {
+    if (!syncDetail) return;
+    document.getElementById('syncBar').classList.toggle('balloon-open');
   }
 
   // ── Toast ─────────────────────────────────────────────────
@@ -684,8 +714,8 @@
         const added = items.filter(i => i.checked && !localIds.has(i.id));
         if (added.length > 0) showChanges(added);
       }
-    } catch {
-      setSync('error', 'Greška — pokušavam ponovo');
+    } catch (e) {
+      setSync('error', 'Greška — pokušavam ponovo', e?.message || 'mreža');
     }
   }
 
@@ -714,11 +744,10 @@
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         if (res.status === 422 && err.message?.includes('too large')) {
-          setSync('error', 'Datoteka prevelika — ukloni slike');
+          setSync('error', 'Datoteka prevelika — ukloni slike', '422 file too large');
           return;
         }
         if (res.status === 409) {
-          // SHA conflict: someone else pushed since our last fetch — refresh SHA and retry once
           pushing = false;
           setSync('syncing', 'Konflikt — sinkronizacija…');
           const ref = await fetch(apiUrl(), {
@@ -733,10 +762,10 @@
           return;
         }
         if (res.status === 401 || res.status === 403) {
-          setSync('error', 'Token nije ispravan — provjeri postavke');
+          setSync('error', 'Token nije ispravan — provjeri postavke', `${res.status} unauthorized`);
           return;
         }
-        throw new Error(res.status);
+        throw new Error(`HTTP ${res.status}`);
       }
       const data = await res.json();
       fileSha = data.content.sha;
@@ -744,7 +773,7 @@
       dirty = false;
       setSync('ok', 'Spremljeno');
     } catch (e) {
-      setSync('dirty', `Nije spremljeno (${e?.message || 'mreža'}) — pokušavam ponovo`);
+      setSync('dirty', 'Nije spremljeno — pokušavam ponovo', e?.message || 'mreža');
     } finally {
       pushing = false;
     }
